@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "pico",
+      "displayName": "Pico (ARM GCC)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "/pico-sdk/cmake/preload/toolchains/pico_arm_cortex_m0plus_gcc.cmake",
+        "CMAKE_MAKE_PROGRAM": "/usr/bin/make" 
+      }
+    }
+  ]
+}

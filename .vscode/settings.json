@@ -1,0 +1,8 @@
+{
+    "cmake.configureSettings": {
+        // "PICO_SDK_PATH": "../../pico-sdk" // <-- Set this if you've not set ${env:PICO_SDK_PATH}
+    },
+    "cmake.useCMakePresets": "always",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.errorSquiggles": "disabled"
+}
