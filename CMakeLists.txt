@@ -1,15 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 
-# Set the project name from the external file
-set(PROJECT_NAME_FILE "${CMAKE_CURRENT_SOURCE_DIR}/project_name.txt")
-if(EXISTS ${PROJECT_NAME_FILE})
-    file(READ ${PROJECT_NAME_FILE} FILE_CONTENT)
-    list(GET FILE_CONTENT 0 NAME)
-    message(STATUS "PROJECT NAME: ${NAME}")
-else()
-    message(STATUS "WARNING: PROJECT NAME IS MISSING, USING DEFAULT")
-    set(NAME "default")
-endif()
+# Set the project name
+set(NAME "pico-clock")
+message(STATUS "PROJECT NAME: ${NAME}")
 
 # state the pico version here for WiFi to work
 # pico/pico_w/pico2/pico2_w
@@ -51,10 +44,17 @@ if(USE_PIMORONI STREQUAL "yes")
     include($ENV{PIMORONI_PICO_PATH}/pimoroni_pico_import.cmake)
 endif()
 
+# Add the project libraries to be included
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/project_libraries)
+
 # Gooey boilerplate
 project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
+
+# Shrink the usable size for programs in 128 KB 
+# so we can safely place a file system
+set(PICO_FLASH_SIZE 0x1E0000)
 
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -62,12 +62,49 @@ pico_sdk_init()
 # Add your source files
 add_executable(${NAME}
     main.cpp
+    project_libraries/color.cpp
+    project_libraries/my_screen.cpp
+    project_libraries/my_led.cpp
+    project_libraries/bootsel.cpp
+    project_libraries/buttonmgr.cpp
+    project_libraries/msc_disk.cpp
+    project_libraries/diskio.cpp
+    project_libraries/filesystem.cpp
+    project_libraries/usb_descriptors.cpp
 )
+
+# Adding some libraries here would save you from having to use subdirectories
+# in your program #INCLUDES i.e. "/drivers/st7789/st7789.hpp" vs just "st7789.hpp" 
+# it's for "complex" libraries that have external dependencies
+add_subdirectory(${PIMORONI_PICO_PATH}/drivers/st7789 st7789)
+add_subdirectory(${PIMORONI_PICO_PATH}/libraries/pico_graphics pico_graphics)
+add_subdirectory(${PIMORONI_PICO_PATH}/libraries/pico_display_2 pico_display_2)
+add_subdirectory(${PIMORONI_PICO_PATH}/drivers/fatfs fatfs)
+
+# Include required libraries
+include(common/pimoroni_bus)
+include(drivers/rgbled/rgbled)
+include(drivers/button/button)
+
 
 # Add pico_stdlib library which aggregates commonly used features
 target_link_libraries(${NAME} 
     pico_stdlib 
-    pico_cyw43_arch_none
+    #pico_cyw43_arch_none
+    pico_cyw43_arch_lwip_threadsafe_background
+    hardware_clocks
+    hardware_pio
+    st7789
+    pico_display_2
+    pico_graphics
+    rgbled
+    button
+    pico_lwip_sntp
+    hardware_flash
+    hardware_adc
+    tinyusb_device
+    tinyusb_board
+    fatfs
     )
 
 # create map/bin/hex/uf2 file in addition to ELF.
