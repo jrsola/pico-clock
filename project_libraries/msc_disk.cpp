@@ -54,18 +54,27 @@ int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16],
                         void* buffer, uint16_t bufsize) {
     uint16_t reply_len = 0;
     switch (scsi_cmd[0]) {
-        case SCSI_CMD_INQUIRY:
-            if (bufsize < 36) return -1;
-            memcpy(buffer,
-                   (uint8_t[36]){
-                       0x00, 0x80, 0x00, 0x01, 36 - 5, 0, 0, 0,
-                       'R','P','I','-','P','I','C','O',
-                       'U','S','B',' ','D','I','S','K',
-                       '1','.','0','0'
-                   },
-                   36);
-            reply_len = 36;
-            break;
+        case SCSI_CMD_INQUIRY: {
+    if (bufsize < 36) return -1;
+
+    static const uint8_t inquiry_response[36] = {
+        0x00, 0x80, 0x00, 0x01, 36 - 5, 0x00, 0x00, 0x00,
+
+        // Vendor ID: 8 bytes
+        'R','P','I','-','P','I','C','O',
+
+        // Product ID: 16 bytes
+        'U','S','B',' ','D','I','S','K',
+        ' ',' ',' ',' ',' ',' ',' ',' ',
+
+        // Product revision: 4 bytes
+        '1','.','0','0'
+    };
+
+    memcpy(buffer, inquiry_response, 36);
+    reply_len = 36;
+    break;
+}
 
         case SCSI_CMD_READ_CAPACITY_10:
             if (bufsize < 8) return -1;
@@ -103,13 +112,24 @@ void tud_msc_inquiry_cb(uint8_t lun,
                         uint8_t vendor_id[8],
                         uint8_t product_id[16],
                         uint8_t product_rev[4]) {
-    const char vid[] = "RPI-PICO";
-    const char pid[] = "USB DISK";
-    const char rev[] = "1.0";
+    (void) lun;
 
-    memcpy(vendor_id,  vid, sizeof(vendor_id[0]) * 8);
-    memcpy(product_id, pid, sizeof(product_id[0]) * 16);
-    memcpy(product_rev, rev, sizeof(product_rev[0]) * 4);
+    const uint8_t vid[8] = {
+        'R','P','I','-','P','I','C','O'
+    };
+
+    const uint8_t pid[16] = {
+        'U','S','B',' ','D','I','S','K',
+        ' ',' ',' ',' ',' ',' ',' ',' '
+    };
+
+    const uint8_t rev[4] = {
+        '1','.','0','0'
+    };
+
+    memcpy(vendor_id, vid, 8);
+    memcpy(product_id, pid, 16);
+    memcpy(product_rev, rev, 4);
 }
 
 // Indica si el disc està llest per operar
