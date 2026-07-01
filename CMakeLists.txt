@@ -47,6 +47,7 @@ endif()
 # Add the project libraries to be included
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/project_libraries)
 
+
 # Gooey boilerplate
 project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
@@ -73,19 +74,33 @@ add_executable(${NAME}
     project_libraries/usb_descriptors.cpp
 )
 
+target_include_directories(${NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/project_libraries
+    ${CMAKE_CURRENT_SOURCE_DIR}/project_libraries/fatfs
+)
+
 # Adding some libraries here would save you from having to use subdirectories
 # in your program #INCLUDES i.e. "/drivers/st7789/st7789.hpp" vs just "st7789.hpp" 
 # it's for "complex" libraries that have external dependencies
 add_subdirectory(${PIMORONI_PICO_PATH}/drivers/st7789 st7789)
 add_subdirectory(${PIMORONI_PICO_PATH}/libraries/pico_graphics pico_graphics)
 add_subdirectory(${PIMORONI_PICO_PATH}/libraries/pico_display_2 pico_display_2)
-add_subdirectory(${PIMORONI_PICO_PATH}/drivers/fatfs fatfs)
 
 # Include required libraries
 include(common/pimoroni_bus)
 include(drivers/rgbled/rgbled)
 include(drivers/button/button)
 
+# Use our own local FatFs copy, not the one from Pimoroni
+set(PROJECT_FATFS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/project_libraries/fatfs")
+
+add_library(fatfs STATIC
+    ${PROJECT_FATFS_DIR}/ff.c
+)
+
+target_include_directories(fatfs PUBLIC
+    ${PROJECT_FATFS_DIR}
+)
 
 # Add pico_stdlib library which aggregates commonly used features
 target_link_libraries(${NAME} 

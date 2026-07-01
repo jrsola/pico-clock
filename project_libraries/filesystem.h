@@ -13,5 +13,7 @@ static FRESULT res;
 
 
 bool mountfs();
+bool format_disk();
+bool file_exists(const char* path);
 bool read_file(const char* path, char* buffer, size_t bufsize);
 bool write_file(const char* path, const char* content);

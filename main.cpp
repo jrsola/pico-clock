@@ -119,21 +119,29 @@ std::string info_voltage(){
 }
 
 void init_filesystem(){
-    disk_initialize(0);
     if (!mountfs()) {
-        screen.writeln("ERROR INITIALIZING FATFS", "red");
+        screen.writeln("FSYSTEM NOT FOUND", "red");
+        if(!format_disk()){
+            screen.writeln("COULD NOT FORMAT FS", "red");
+        }else{
+            mountfs();
+        }
     } else {
-        screen.writeln("FATFS DISK INITIALIZED", "white");
-        
+        screen.writeln("FILESYSTEM FOUND", "green");
     };
-    // configuration files, each holds a value. 
-    // FAT12 (8.3) format for filenames
-    std::string textu = "AMIGARULEZ";
-     if (!write_file("/CONFIG.TXT","WIFI_NAME\nWIFI_PASSWORD"))
-        screen.writeln("ERROR WRITING CONFIG FILE", "red");
-    else 
-        screen.writeln("CONFIG FILE WRITTEN", "green");
-    return;
+ 
+ 
+    // checks if the CONFIG.TXT file exists. 
+    // If it does not, it creates an empty one.
+    if (file_exists("CONFIG.TXT")) {
+        screen.writeln("CONFIG FILE FOUND", "green");
+    } else {
+        if (write_file("CONFIG.TXT","WIFI_NAME\nWIFI_PASSWORD")) {
+            screen.writeln("CONFIG FILE CREATED", "orange");
+        } else {
+            screen.writeln("ERROR CREATING CONFIG FILE", "red");
+        }
+    }
 }
 
 int main() {

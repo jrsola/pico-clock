@@ -11,6 +11,7 @@
 #define DISK_SECTOR_COUNT   (DISK_SIZE_BYTES / DISK_SECTOR_SIZE)
 #define DISK_FLASH_OFFSET   (FLASH_SIZE_BYTES - DISK_SIZE_BYTES) // This is where the disk starts  
 
+// just confirms the disk media exists
 DSTATUS disk_initialize(BYTE pdrv) {
     return (pdrv == 0) ? RES_OK : STA_NOINIT; 
 }
