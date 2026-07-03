@@ -4,12 +4,7 @@
 #include "pico/sync.h"
 #include "ff.h"
 #include "diskio.h"
-
-#define FLASH_SIZE_BYTES    (2 * 1024 * 1024)
-#define DISK_SIZE_BYTES     (128 * 1024)
-#define DISK_SECTOR_SIZE    512
-#define DISK_SECTOR_COUNT   (DISK_SIZE_BYTES / DISK_SECTOR_SIZE)
-#define DISK_FLASH_OFFSET   (FLASH_SIZE_BYTES - DISK_SIZE_BYTES)
+#include "disk_config.h"
 
 DSTATUS disk_initialize(BYTE pdrv) {
     return (pdrv == 0) ? 0 : STA_NOINIT;

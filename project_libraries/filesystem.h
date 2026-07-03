@@ -14,9 +14,12 @@ static constexpr size_t WORKBUFFER_SIZE = 4096;
 static uint8_t work_buffer[WORKBUFFER_SIZE];
 static FRESULT res;
 
-bool mountfs();
-bool unmountfs();
-bool format_disk();
-bool file_exists(const char* path);
+FRESULT mountfs();
+FRESULT unmountfs();
+FRESULT format_disk();
+FRESULT file_exists(const char* path);
+std::string read_config(const std::string& filename, const std::string& key);
+FRESULT write_config(const std::string& filename, const std::string& key, const std::string& value);
+
 bool read_file(const char* path, char* buffer, size_t bufsize);
 bool write_file(const char* path, const char* content);

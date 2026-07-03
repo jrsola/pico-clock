@@ -119,8 +119,7 @@ std::string info_voltage(){
 }
 
 void init_filesystem(){
-    filesystem_screen(&screen);
-    if (!mountfs()) {
+    if (mountfs() != FR_OK) {
         screen.writeln("FSYSTEM NOT FOUND", "red");
         if(!format_disk()){
             screen.writeln("COULD NOT FORMAT FS", "red");
@@ -212,24 +211,6 @@ int main() {
     time_string = get_time();
 
     while(true) {
-/*         // detect if the A button is pressed (could be A, B, X, or Y)
-        if(button_a.raw() && !button_y.raw()) {
-            led.new_blink(5,500,"blue");
-        } 
-        if(button_a.raw() && button_y.raw()) {
-            reset_usb_boot(0, 0);
-        } 
-
-        if(get_bootsel_button()) {
-            led.new_blink(5,500,"green");
-        }
-
-        led.blink_update();
-        if(get_time() != time_string){
-            screen.writexy(120,150,time_string, "dark blue");
-            time_string = get_time();
-            screen.writexy(120,150,time_string, "white");
-        }; */
         buttonmgr.update();
         if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
         if (buttonmgr.is_a() && (buttonmgr.is_bootsel_single() || buttonmgr.is_bootsel_long())) sleep_ms(1000);
