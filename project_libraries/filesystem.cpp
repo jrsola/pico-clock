@@ -1,24 +1,56 @@
 #include <cstring>
 #include <cstdio>
 #include "filesystem.h"
+#include "my_screen.h"
 
 static bool fs_mounted = false;
+static myScreen* debug_screen = nullptr;
 
-bool mountfs()
-{
+void filesystem_screen(myScreen* screen){
+    debug_screen = screen;
+}
+
+static void fs_debug(const char* text, const char* color = "") {
+    if (debug_screen) {
+        debug_screen->writeln(text, color);
+    }
+}
+
+bool mountfs() {
     if (fs_mounted) {
+        fs_debug("already mounted", "green");
         return true;
     }
 
-    // Try to mount the existing filesystem
-    FRESULT res = f_mount(&fs, "0:", 1);
-    
-    if (res == FR_OK){
+    FRESULT res = f_mount(&fs, "", 1);
+
+    if (res == FR_OK) {
         fs_mounted = true;
+        fs_debug("mountfs OK", "green");
         return true;
     }
 
-    // there is no filesystem
+    fs_debug("mountfs failed", "red");
+
+    if (res == FR_NO_FILESYSTEM) {
+        fs_debug("no FAT volume", "yellow");
+    } else if (res == FR_DISK_ERR) {
+        fs_debug("disk err mount", "red");
+    } else if (res == FR_NOT_READY) {
+        fs_debug("not ready", "red");
+    }
+
+    return false;
+}
+
+bool unmountfs() {
+    FRESULT res = f_mount(nullptr, "", 0);
+
+    if (res == FR_OK) {
+        fs_mounted = false;
+        return true;
+    }
+
     return false;
 }
 
@@ -83,36 +115,89 @@ bool read_file(const char *path, char *buffer, size_t bufsize)
 
 bool write_file(const char *path, const char *content)
 {
+    fs_debug("WRITE START", "white");
+
     if (!mountfs()) {
+        fs_debug("WRITE: MOUNT FAIL", "red");
         return false;
     }
-    
+
+    fs_debug("WRITE: MOUNT OK", "green");
+
     FIL file;
     FRESULT res = f_open(&file, path, FA_WRITE | FA_CREATE_ALWAYS);
-    
-    if (res != FR_OK)
-    {
+
+    if (res != FR_OK) {
+        fs_debug("WRITE: OPEN FAIL", "red");
+
+        if (res == FR_INVALID_NAME) {
+            fs_debug("ERR INVALID NAME", "red");
+        } else if (res == FR_DENIED) {
+            fs_debug("ERR DENIED", "red");
+        } else if (res == FR_DISK_ERR) {
+            fs_debug("ERR DISK", "red");
+        } else if (res == FR_NOT_READY) {
+            fs_debug("ERR NOT READY", "red");
+        } else if (res == FR_NO_FILESYSTEM) {
+            fs_debug("ERR NO FS", "red");
+        } else if (res == FR_NOT_ENABLED) {
+            fs_debug("ERR NOT ENABLED", "red");
+        } else {
+            fs_debug("ERR OTHER OPEN", "red");
+        }
+
         return false;
     }
+
+    fs_debug("WRITE: OPEN OK", "green");
 
     UINT bytes_written = 0;
     UINT bytes_to_write = strlen(content);
 
     res = f_write(&file, content, bytes_to_write, &bytes_written);
 
-    if (res != FR_OK || bytes_written != bytes_to_write) {
+    if (res != FR_OK) {
+        fs_debug("WRITE: WRITE FAIL", "red");
+
+        if (res == FR_DISK_ERR) {
+            fs_debug("ERR DISK WRITE", "red");
+        } else if (res == FR_DENIED) {
+            fs_debug("ERR DENIED WRITE", "red");
+        } else {
+            fs_debug("ERR OTHER WRITE", "red");
+        }
+
         f_close(&file);
         return false;
     }
+
+    if (bytes_written != bytes_to_write) {
+        fs_debug("WRITE: SIZE MISMATCH", "red");
+        f_close(&file);
+        return false;
+    }
+
+    fs_debug("WRITE: WRITE OK", "green");
 
     res = f_sync(&file);
 
-    if (res != FR_OK)
-    {
+    if (res != FR_OK) {
+        fs_debug("WRITE: SYNC FAIL", "red");
         f_close(&file);
         return false;
     }
 
-    f_close(&file);
+    fs_debug("WRITE: SYNC OK", "green");
+
+    res = f_close(&file);
+
+    if (res != FR_OK) {
+        fs_debug("WRITE: CLOSE FAIL", "red");
+        return false;
+    }
+
+    fs_debug("WRITE: CLOSE OK", "green");
+    fs_debug("WRITE OK", "green");
+
     return true;
 }

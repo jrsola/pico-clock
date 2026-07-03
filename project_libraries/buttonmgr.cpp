@@ -44,6 +44,10 @@ void ButtonManager::update() {
     was_pressed = pressed;
 }
 
+BootselEvent ButtonManager::get_bootsel_event() const {
+    return bootsel_result;
+}
+
 bool ButtonManager::is_a()  {
     return button_a.raw();
 }
@@ -60,6 +64,16 @@ bool ButtonManager::is_y()  {
     return button_y.raw();
 }
 
-BootselEvent ButtonManager::get_bootsel_event() const {
-    return bootsel_result;
+bool ButtonManager::is_bootsel_single(){
+    return (bootsel_result==BootselEvent::SinglePress);
 }
+
+bool ButtonManager::is_bootsel_double(){
+    return (bootsel_result==BootselEvent::DoublePress);
+}
+
+bool ButtonManager::is_bootsel_long(){
+    return (bootsel_result==BootselEvent::LongPress);
+}
+
+

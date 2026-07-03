@@ -5,3 +5,4 @@
 #include "hardware/sync.h"
 
 void usb_msc_init();
+bool pico_mounted();

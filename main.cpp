@@ -17,6 +17,7 @@
 
 #include "pico/unique_id.h"
 #include "hardware/adc.h"
+#include "hardware/watchdog.h"
 
 #include "button.hpp"
 
@@ -27,7 +28,6 @@
 #include "project_libraries/buttonmgr.h"
 #include "project_libraries/msc_disk.h"
 #include "project_libraries/filesystem.h"
-
 
 using namespace pimoroni;
 
@@ -119,6 +119,7 @@ std::string info_voltage(){
 }
 
 void init_filesystem(){
+    filesystem_screen(&screen);
     if (!mountfs()) {
         screen.writeln("FSYSTEM NOT FOUND", "red");
         if(!format_disk()){
@@ -133,14 +134,27 @@ void init_filesystem(){
  
     // checks if the CONFIG.TXT file exists. 
     // If it does not, it creates an empty one.
-    if (file_exists("CONFIG.TXT")) {
-        screen.writeln("CONFIG FILE FOUND", "green");
-    } else {
-        if (write_file("CONFIG.TXT","WIFI_NAME\nWIFI_PASSWORD")) {
-            screen.writeln("CONFIG FILE CREATED", "orange");
-        } else {
-            screen.writeln("ERROR CREATING CONFIG FILE", "red");
+    if (!file_exists("CONFIG.TXT")) {
+        screen.writeln("NO CONFIG FILE FOUND", "yellow");
+        write_file("/CONFIG.TXT","WIFI_NAME\r\nWIFI_PASSWORD\r\n");
+        screen.writeln("CONFIG FILE CREATED", "green");
+        unmountfs();
+        screen.writeln("CONNECT TO PC", "orange");
+        screen.writeln("EDIT CONFIG.TXT", "orange");
+        screen.writeln("THEN EJECT", "orange");
+
+        usb_msc_init();
+        while (pico_mounted()){
+            tud_task();
+            sleep_ms(10);
         }
+        screen.writeln("REBOOTING...", "white");
+        sleep_ms(5000);
+        watchdog_reboot(0,0,0);
+        while(true){
+            sleep_ms(1000);
+        }
+
     }
 }
 
@@ -154,7 +168,7 @@ int main() {
  
     // Initialize FATFS & file system 
     init_filesystem();
-    usb_msc_init();
+    // usb_msc_init();
 
     // Mount or format LittleFS partition
     //std::string config_file = "BOOTCNT.TXT"; // FAT12 (8.3)
@@ -216,10 +230,11 @@ int main() {
             time_string = get_time();
             screen.writexy(120,150,time_string, "white");
         }; */
-        tud_task();
         buttonmgr.update();
         if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
-        if (buttonmgr.get_bootsel_event()== BootselEvent::DoublePress) reset_usb_boot(0,0);
+        if (buttonmgr.is_a() && (buttonmgr.is_bootsel_single() || buttonmgr.is_bootsel_long())) sleep_ms(1000);
+        if (buttonmgr.is_bootsel_double()) reset_usb_boot(0,0);
+        if (buttonmgr.is_bootsel_long()) watchdog_reboot(0,0,0);
         led.blink_update();
     } 
 

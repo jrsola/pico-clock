@@ -3,6 +3,9 @@
 #include <cstdio>
 #include "ff.h"
 
+class myScreen;
+
+void filesystem_screen(myScreen* screen);
 
 static FATFS fs;
 static FIL file;
@@ -11,8 +14,8 @@ static constexpr size_t WORKBUFFER_SIZE = 4096;
 static uint8_t work_buffer[WORKBUFFER_SIZE];
 static FRESULT res;
 
-
 bool mountfs();
+bool unmountfs();
 bool format_disk();
 bool file_exists(const char* path);
 bool read_file(const char* path, char* buffer, size_t bufsize);

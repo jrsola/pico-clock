@@ -9,6 +9,12 @@ extern const uint8_t _binary_fat12_disk_start[]; // Linker symbols
 
 static bool ejected = false;
 
+// checks if the pico is mounted in Windows
+// it's te opposite of ejected (if it's not ejected it's in Windows)
+bool pico_mounted() {
+    return !ejected;
+}
+
 void usb_msc_init() {
     tusb_init();
 }

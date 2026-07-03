@@ -117,6 +117,7 @@ target_link_libraries(${NAME}
     pico_lwip_sntp
     hardware_flash
     hardware_adc
+    hardware_watchdog
     tinyusb_device
     tinyusb_board
     fatfs

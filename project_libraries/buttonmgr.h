@@ -25,6 +25,9 @@ private:
     int bootsel_click_count = 0;
     BootselEvent bootsel_result = BootselEvent::None;
 
+private:
+    BootselEvent get_bootsel_event() const;
+
 public:
     ButtonManager();
 
@@ -34,6 +37,9 @@ public:
     bool is_b() ;
     bool is_x() ;
     bool is_y() ;
+    bool is_bootsel_single();
+    bool is_bootsel_double();
+    bool is_bootsel_long();
 
-    BootselEvent get_bootsel_event() const;
+
 };
