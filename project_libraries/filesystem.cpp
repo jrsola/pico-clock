@@ -74,6 +74,49 @@ FRESULT file_exists(const char* path){
     return f_stat(path, &finfo);
 }
 
+// private function to write a text file
+static FRESULT write_text_file(const std::string& filename, const std::string& content)
+{
+    FRESULT res = mountfs();
+
+    if (res != FR_OK) {
+        return res;
+    }
+
+    FIL file;
+
+    res = f_open(&file, filename.c_str(), FA_WRITE | FA_CREATE_ALWAYS);
+
+    if (res != FR_OK) {
+        return res;
+    }
+
+    UINT bytes_written = 0;
+    UINT bytes_to_write = content.size();
+
+    res = f_write(&file, content.c_str(), bytes_to_write, &bytes_written);
+
+    if (res != FR_OK) {
+        f_close(&file);
+        return res;
+    }
+
+    if (bytes_written != bytes_to_write) {
+        f_close(&file);
+        return FR_DISK_ERR;
+    }
+
+    res = f_sync(&file);
+
+    if (res != FR_OK) {
+        f_close(&file);
+        return res;
+    }
+
+    return f_close(&file);
+}
+
+
 // looks for a key in the configuration file and returns its value
 // if the key can't be found it returns the value "key_not_found"
 std::string read_config(const std::string& filename, const std::string& key) {
@@ -81,7 +124,7 @@ std::string read_config(const std::string& filename, const std::string& key) {
     if (filename.empty() || key.empty()) return "invalid_parameters";
 
     // if config file does not exist, report error
-    if (file_exists(filename) != FR_OK) return "config_file_missing";
+    if (file_exists(filename.c_str()) != FR_OK) return "config_file_missing";
 
     // config file exists and key is not empty, proceed
     FIL file;
@@ -163,111 +206,187 @@ std::string read_config(const std::string& filename, const std::string& key) {
     return "key_not_found";
 }
 
-
-bool read_file(const char *path, char *buffer, size_t bufsize)
+FRESULT write_config(const std::string& filename,
+                     const std::string& key,
+                     const std::string& value)
 {
-    if (!mountfs()) {
-        return false;
+    if (filename.empty() || key.empty()) {
+        return FR_INVALID_PARAMETER;
     }
-    
+
+    // Evitem claus que trenquin el format [CLAU]
+    if (key.find('\r') != std::string::npos ||
+        key.find('\n') != std::string::npos ||
+        key.find('[')  != std::string::npos ||
+        key.find(']')  != std::string::npos) {
+        return FR_INVALID_NAME;
+    }
+
+    // Primer mirem si la clau ja existeix
+    std::string current_value = read_config(filename, key);
+
+    // Cas 1: el fitxer no existeix encara
+    if (current_value == "config_file_missing") {
+        std::string new_content;
+
+        new_content += "[" + key + "]\r\n";
+        new_content += "\r\n";
+        new_content += value + "\r\n";
+
+        return write_text_file(filename, new_content);
+    }
+
+    // Cas 2: error obrint el fitxer
+    if (current_value == "error_opening_file") {
+        return FR_DISK_ERR;
+    }
+
+    // Cas 3: paràmetres invàlids
+    if (current_value == "invalid_parameters") {
+        return FR_INVALID_PARAMETER;
+    }
+
+    // Ara sabem que el fitxer existeix.
+    // Llegim tot el contingut per poder modificar-lo.
     FIL file;
-    FRESULT res = f_open(&file, path, FA_READ);
-    if (res != FR_OK)
-    {
-        return false;
+    FRESULT res = f_open(&file, filename.c_str(), FA_READ);
+
+    if (res != FR_OK) {
+        return res;
     }
+
+    FSIZE_t file_size = f_size(&file);
+
+    std::string content;
+    content.resize(file_size);
 
     UINT bytes_read = 0;
-    res = f_read(&file, buffer, bufsize - 1, &bytes_read);
-    if (res != FR_OK)
-    {
-        f_close(&file);
-        return false;
+
+    if (file_size > 0) {
+        res = f_read(&file, content.data(), file_size, &bytes_read);
+
+        if (res != FR_OK) {
+            f_close(&file);
+            return res;
+        }
+
+        content.resize(bytes_read);
     }
 
-    buffer[bytes_read] = '\0'; // Null-terminate
     f_close(&file);
-    return true;
-}
 
-bool write_file(const char *path, const char *content) {
-    if (!mountfs()) return false;
+    // Normalitzem salts de línia: traiem '\r' i treballem amb '\n'
+    std::string normalized;
+    normalized.reserve(content.size());
 
-    FIL file;
-    FRESULT res = f_open(&file, path, FA_WRITE | FA_CREATE_ALWAYS);
+    for (char c : content) {
+        if (c != '\r') {
+            normalized.push_back(c);
+        }
+    }
 
-    if (res != FR_OK) {
-        fs_debug("WRITE: OPEN FAIL", "red");
+    std::string wanted_key = "[" + key + "]";
 
-        if (res == FR_INVALID_NAME) {
-            fs_debug("ERR INVALID NAME", "red");
-        } else if (res == FR_DENIED) {
-            fs_debug("ERR DENIED", "red");
-        } else if (res == FR_DISK_ERR) {
-            fs_debug("ERR DISK", "red");
-        } else if (res == FR_NOT_READY) {
-            fs_debug("ERR NOT READY", "red");
-        } else if (res == FR_NO_FILESYSTEM) {
-            fs_debug("ERR NO FS", "red");
-        } else if (res == FR_NOT_ENABLED) {
-            fs_debug("ERR NOT ENABLED", "red");
-        } else {
-            fs_debug("ERR OTHER OPEN", "red");
+    // Cas 4: el fitxer existeix però la clau no hi és
+    if (current_value == "key_not_found") {
+        if (!normalized.empty() && normalized.back() != '\n') {
+            normalized += "\n";
         }
 
-        return false;
-    }
-
-    fs_debug("WRITE: OPEN OK", "green");
-
-    UINT bytes_written = 0;
-    UINT bytes_to_write = strlen(content);
-
-    res = f_write(&file, content, bytes_to_write, &bytes_written);
-
-    if (res != FR_OK) {
-        fs_debug("WRITE: WRITE FAIL", "red");
-
-        if (res == FR_DISK_ERR) {
-            fs_debug("ERR DISK WRITE", "red");
-        } else if (res == FR_DENIED) {
-            fs_debug("ERR DENIED WRITE", "red");
-        } else {
-            fs_debug("ERR OTHER WRITE", "red");
+        if (!normalized.empty()) {
+            normalized += "\n";
         }
 
-        f_close(&file);
-        return false;
+        normalized += wanted_key + "\n";
+        normalized += "\n";
+        normalized += value + "\n";
     }
 
-    if (bytes_written != bytes_to_write) {
-        fs_debug("WRITE: SIZE MISMATCH", "red");
-        f_close(&file);
-        return false;
+    // Cas 5: la clau existeix i cal actualitzar el valor
+    else {
+        size_t pos = 0;
+        bool updated = false;
+
+        while (pos < normalized.size()) {
+            size_t line_end = normalized.find('\n', pos);
+
+            if (line_end == std::string::npos) {
+                line_end = normalized.size();
+            }
+
+            std::string line = normalized.substr(pos, line_end - pos);
+
+            if (line == wanted_key) {
+                // Hem trobat [CLAU].
+                // Ara busquem la primera línia no buida després de la clau.
+                size_t value_pos = line_end + 1;
+
+                while (value_pos < normalized.size()) {
+                    size_t value_end = normalized.find('\n', value_pos);
+
+                    if (value_end == std::string::npos) {
+                        value_end = normalized.size();
+                    }
+
+                    std::string existing_value =
+                        normalized.substr(value_pos, value_end - value_pos);
+
+                    if (!existing_value.empty()) {
+                        // Substituïm el valor existent pel nou valor
+                        normalized.replace(value_pos,
+                                           value_end - value_pos,
+                                           value);
+                        updated = true;
+                        break;
+                    }
+
+                    value_pos = value_end + 1;
+                }
+
+                // La clau existia però no tenia cap valor sota.
+                if (!updated) {
+                    if (!normalized.empty() && normalized.back() != '\n') {
+                        normalized += "\n";
+                    }
+
+                    normalized += "\n";
+                    normalized += value;
+                    normalized += "\n";
+
+                    updated = true;
+                }
+
+                break;
+            }
+
+            pos = line_end + 1;
+        }
+
+        // Per seguretat: si read_config havia trobat valor però aquí no hem pogut actualitzar,
+        // afegim la clau al final.
+        if (!updated) {
+            if (!normalized.empty() && normalized.back() != '\n') {
+                normalized += "\n";
+            }
+
+            normalized += "\n";
+            normalized += wanted_key + "\n";
+            normalized += "\n";
+            normalized += value + "\n";
+        }
     }
 
-    fs_debug("WRITE: WRITE OK", "green");
+    // Tornem a convertir a CRLF per Windows
+    std::string output;
+    output.reserve(normalized.size() + 32);
 
-    res = f_sync(&file);
-
-    if (res != FR_OK) {
-        fs_debug("WRITE: SYNC FAIL", "red");
-        f_close(&file);
-        return false;
+    for (char c : normalized) {
+        if (c == '\n') {
+            output += "\r\n";
+        } else {
+            output += c;
+        }
     }
 
-    fs_debug("WRITE: SYNC OK", "green");
-
-    res = f_close(&file);
-
-    if (res != FR_OK) {
-        fs_debug("WRITE: CLOSE FAIL", "red");
-        return false;
-    }
-
-    fs_debug("WRITE: CLOSE OK", "green");
-    fs_debug("WRITE OK", "green");
-
-    return true;
+    return write_text_file(filename, output);
 }
-

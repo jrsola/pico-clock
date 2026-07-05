@@ -135,7 +135,7 @@ void init_filesystem(){
     // If it does not, it creates an empty one.
     if (!file_exists("CONFIG.TXT")) {
         screen.writeln("NO CONFIG FILE FOUND", "yellow");
-        write_file("/CONFIG.TXT","WIFI_NAME\r\nWIFI_PASSWORD\r\n");
+        //write_file("/CONFIG.TXT","WIFI_NAME\r\nWIFI_PASSWORD\r\n");
         screen.writeln("CONFIG FILE CREATED", "green");
         unmountfs();
         screen.writeln("CONNECT TO PC", "orange");
@@ -156,6 +156,26 @@ void init_filesystem(){
 
     }
 }
+
+void expose_drive(){
+    FRESULT res = unmountfs();
+    if (res != FR_OK) {
+        screen.writeln("UNMOUNT FS FAIL", "red");
+        screen.update();
+        return;
+    }
+    screen.writeln("FS UNMOUNTED", "green");
+    screen.update();
+    usb_msc_init();
+    while(pico_mounted()){
+        tud_task();
+        sleep_ms(10);
+    }
+    screen.writeln("UNMOUNTED", "white");
+    screen.update();
+    mountfs();
+}
+
 
 int main() {
 
@@ -197,11 +217,11 @@ int main() {
     init_wifi();
     init_sntp("pool.ntp.org");
 
-    screen.writeln("SYNCRONIZING TIME","white");
+    //screen.writeln("SYNCRONIZING TIME","white");
     while (!time_synched) {
         sleep_ms(50); // wait for sntp to sync clock
     }
-    screen.writeln("TIME SYCHRONIZED","green");
+    //screen.writeln("TIME SYCHRONIZED","green");
     screen.writeln(); // empty line
 
     screen.writeln("TIME IS: ", "orange");
@@ -212,8 +232,8 @@ int main() {
 
     while(true) {
         buttonmgr.update();
-        if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
-        if (buttonmgr.is_a() && (buttonmgr.is_bootsel_single() || buttonmgr.is_bootsel_long())) sleep_ms(1000);
+        //if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
+        if (buttonmgr.is_a() && (buttonmgr.is_bootsel_single() || buttonmgr.is_bootsel_long())) expose_drive();
         if (buttonmgr.is_bootsel_double()) reset_usb_boot(0,0);
         if (buttonmgr.is_bootsel_long()) watchdog_reboot(0,0,0);
         led.blink_update();
