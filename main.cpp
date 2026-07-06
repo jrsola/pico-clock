@@ -28,6 +28,7 @@
 #include "project_libraries/buttonmgr.h"
 #include "project_libraries/msc_disk.h"
 #include "project_libraries/filesystem.h"
+#include "project_libraries/ram_disk.h"
 
 using namespace pimoroni;
 
@@ -118,45 +119,6 @@ std::string info_voltage(){
     return std::to_string(voltage);
 }
 
-void init_filesystem(){
-    if (mountfs() != FR_OK) {
-        screen.writeln("FSYSTEM NOT FOUND", "red");
-        if(!format_disk()){
-            screen.writeln("COULD NOT FORMAT FS", "red");
-        }else{
-            mountfs();
-        }
-    } else {
-        screen.writeln("FILESYSTEM FOUND", "green");
-    };
- 
- 
-    // checks if the CONFIG.TXT file exists. 
-    // If it does not, it creates an empty one.
-    if (!file_exists("CONFIG.TXT")) {
-        screen.writeln("NO CONFIG FILE FOUND", "yellow");
-        //write_file("/CONFIG.TXT","WIFI_NAME\r\nWIFI_PASSWORD\r\n");
-        screen.writeln("CONFIG FILE CREATED", "green");
-        unmountfs();
-        screen.writeln("CONNECT TO PC", "orange");
-        screen.writeln("EDIT CONFIG.TXT", "orange");
-        screen.writeln("THEN EJECT", "orange");
-
-        usb_msc_init();
-        while (pico_mounted()){
-            tud_task();
-            sleep_ms(10);
-        }
-        screen.writeln("REBOOTING...", "white");
-        sleep_ms(5000);
-        watchdog_reboot(0,0,0);
-        while(true){
-            sleep_ms(1000);
-        }
-
-    }
-}
-
 void expose_drive(){
     FRESULT res = unmountfs();
     if (res != FR_OK) {
@@ -166,14 +128,78 @@ void expose_drive(){
     }
     screen.writeln("FS UNMOUNTED", "green");
     screen.update();
+
     usb_msc_init();
+
     while(pico_mounted()){
         tud_task();
         sleep_ms(10);
     }
+
     screen.writeln("UNMOUNTED", "white");
     screen.update();
+    
+    ram_disk_flush_to_flash();
+
+    tud_disconnect();
+
+    sleep_ms(1000);
+
     mountfs();
+    screen.writeln("RETURNING", "white");
+    screen.update();
+}
+
+void init_filesystem(){
+    screen.writeln("INITIALIZING FILESYSTEM: ", "white");
+    screen.update();
+
+    ram_disk_load_from_flash();
+    FRESULT res = mountfs();
+
+    if (res == FR_OK) {
+        screen.writeln("FILESYSTEM OK: ", "green");
+        screen.update();
+        return;
+    } else {
+        ram_disk_format_fat12();
+        ram_disk_flush_to_flash();
+        screen.writeln("FILESYSTEM FORMATTED", "orange");
+    }
+
+    ram_disk_load_from_flash();
+    res = mountfs();
+
+    if (res == FR_OK) {
+        screen.writeln("FILESYSTEM OK: ", "green");
+        screen.update();
+    } else {
+        screen.writeln("FILESYSTEM ERROR", "red");
+    }
+
+    while(true){
+        sleep_ms(1000);
+    }
+
+    expose_drive();
+
+    screen.writeln("REBOOTING...", "white");
+        sleep_ms(5000);
+        watchdog_reboot(0,0,0);
+        while(true){
+            sleep_ms(1000);
+        }
+ 
+    // // checks if the CONFIG.TXT file exists. 
+    // // If it does not, it creates an empty one.
+    // if (!file_exists("CONFIG.TXT")) {
+    //     screen.writeln("NO CONFIG FILE FOUND", "yellow");
+    //     //write_file("/CONFIG.TXT","WIFI_NAME\r\nWIFI_PASSWORD\r\n");
+    //     screen.writeln("CONFIG FILE CREATED", "green");
+    //     unmountfs();
+    //     screen.writeln("CONNECT TO PC", "orange");
+    //     screen.writeln("EDIT CONFIG.TXT", "orange");
+    //     screen.writeln("THEN EJECT", "orange");
 }
 
 
@@ -233,10 +259,14 @@ int main() {
     while(true) {
         buttonmgr.update();
         //if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
-        if (buttonmgr.is_a() && (buttonmgr.is_bootsel_single() || buttonmgr.is_bootsel_long())) expose_drive();
-        if (buttonmgr.is_bootsel_double()) reset_usb_boot(0,0);
-        if (buttonmgr.is_bootsel_long()) watchdog_reboot(0,0,0);
-        led.blink_update();
-    } 
-
+    if (buttonmgr.is_bootsel_long()) {
+        reset_usb_boot(0, 0);
+    } else if (buttonmgr.is_a())  {
+        expose_drive();
+    } else if (buttonmgr.is_bootsel_single()) {
+        watchdog_reboot(0, 0, 1000);
+    }
+    led.blink_update();
+    screen.update();
+    }
 }

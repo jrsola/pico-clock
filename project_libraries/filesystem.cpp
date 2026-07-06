@@ -3,6 +3,7 @@
 #include "filesystem.h"
 #include "disk_config.h"
 #include "my_screen.h"
+#include "ram_disk.h"
 
 static bool fs_mounted = false;
 static myScreen* debug_screen = nullptr;
@@ -45,6 +46,9 @@ FRESULT unmountfs() {
 
 // formats the disk created in diskio.cpp
 FRESULT format_disk(){
+
+    f_mount(nullptr, "", 0);
+    fs_mounted = false;
     
     BYTE work[DISK_SECTOR_SIZE];
 
@@ -52,15 +56,19 @@ FRESULT format_disk(){
         .fmt = FM_FAT,
         .n_fat = 1,
         .align = 0,
-        .n_root = 64,
+        .n_root = 32,
         .au_size = DISK_SECTOR_SIZE
     };
 
-    FRESULT res = f_mkfs("0:", &opt, work, sizeof(work));
+    FRESULT res = f_mkfs("", &opt, work, sizeof(work));
 
     // if the operation was succesful, flag fs as not mounted (yet)
-    if (res == FR_OK) fs_mounted = false;
- 
+    if (res == FR_OK) {
+        ram_disk_mark_dirty();
+    }
+    
+    fs_mounted = false;
+    
     return res;
 }
 

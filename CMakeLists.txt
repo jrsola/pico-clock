@@ -53,9 +53,18 @@ project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-# Shrink the usable size for programs in 128 KB 
-# so we can safely place a file system
-set(PICO_FLASH_SIZE 0x1E0000)
+# shrink usable size for programs, so a filesystem 
+# can be placed safely at the end of the flash space
+# size of flash in the pico
+set(PICO_TOTAL_FLASH_KB 2048)
+# size of filesystem in KB
+set(PICO_DISK_SIZE_KB 64)
+
+message(STATUS "Reserved disk size: ${PICO_DISK_SIZE_KB} KB")
+
+# adjust space for programs accordingly
+math(EXPR PICO_FLASH_SIZE "(${PICO_TOTAL_FLASH_KB} - ${PICO_DISK_SIZE_KB}) * 1024")
+
 
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -72,6 +81,7 @@ add_executable(${NAME}
     project_libraries/diskio.cpp
     project_libraries/filesystem.cpp
     project_libraries/usb_descriptors.cpp
+    project_libraries/ram_disk.cpp
 )
 
 target_include_directories(${NAME} PRIVATE

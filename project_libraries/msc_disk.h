@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstring> 
 #include "pico/stdlib.h"
 #include "tusb.h"
