@@ -65,8 +65,10 @@ void init_wifi(){
     cyw43_arch_enable_sta_mode();
 
     // Connect to WiFi network
+    std::string wifi_name = read_config("CONFIG.TXT", "WIFI_NAME");
+    std::string wifi_password = read_config("CONFIG.TXT", "WIFI_PASSWORD");
     for(int attempt = 0; attempt < 3; attempt++){
-        if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000)) {
+        if (cyw43_arch_wifi_connect_timeout_ms(wifi_name.c_str(), wifi_password.c_str(), CYW43_AUTH_WPA2_AES_PSK, 30000)) {
             std::string msg = "ERROR IN WIFI NETWORK #" + std::to_string(attempt+1);
             screen.writeln(msg, "red");
         } else {
@@ -214,6 +216,9 @@ int main() {
     // Initialize FATFS & file system 
     init_filesystem();
     // usb_msc_init();
+
+    screen.writeln(read_config("CONFIG.TXT","WIFI_PASSWORD"),"orange");
+    screen.update();
 
     // Mount or format LittleFS partition
     //std::string config_file = "BOOTCNT.TXT"; // FAT12 (8.3)

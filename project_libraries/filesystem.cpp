@@ -128,108 +128,55 @@ static FRESULT write_text_file(const std::string& filename, const std::string& c
 // looks for a key in the configuration file and returns its value
 // if the key can't be found it returns the value "key_not_found"
 std::string read_config(const std::string& filename, const std::string& key) {
-    // if we did not pass a filename or key, return an error
-    if (filename.empty() || key.empty()) return "invalid_parameters";
 
-    // if config file does not exist, report error
-    if (file_exists(filename.c_str()) != FR_OK) return "config_file_missing";
+    // if we did not pass a filename or key, return an empty string
+    if (filename.empty() || key.empty()) return "";
 
-    // config file exists and key is not empty, proceed
+    // if config file does not exist, return empty string
+    if (file_exists(filename.c_str()) != FR_OK) return "";
+
+    // file exists
     FIL file;
     res = f_open(&file, filename.c_str(), FA_READ);
 
-    if (res != FR_OK) return "error_opening_file";
-
-    FSIZE_t file_size = f_size(&file);
-
-    if (file_size == 0) {
+    // file exists, but it's empty, return empty string 
+    if (f_size(&file) == 0) {
         f_close(&file);
-        return "key_not_found";
+        return "";
     }
 
+    // read file contents in a string, resized to match the filesize.
     std::string content;
-    content.resize(file_size);
+    content.resize(f_size(&file));
 
     UINT bytes_read = 0;
-    res = f_read(&file, content.data(), file_size, &bytes_read);
-
+    FRESULT res = f_read(&file, content.data(), f_size(&file), &bytes_read);
     f_close(&file);
-
-    if (res != FR_OK) {
-        return "key_not_found";
-    }
 
     content.resize(bytes_read);
 
-    // Normalitzem salts de línia: eliminem '\r'
-    std::string normalized;
-    normalized.reserve(content.size());
+    std::string lookup_key = "[" + key + "]";
+    size_t key_pos = content.find(lookup_key);
 
-    for (char c : content) {
-        if (c != '\r') {
-            normalized.push_back(c);
-        }
-    }
+    // npos = no position = lookup key not found, return empty string
+    if (key_pos == std::string::npos) return "";
 
-    std::string wanted_key = "[" + key + "]";
+    // place pointer just after [key] + \r\n (2)
+    size_t value_start = key_pos + lookup_key.length() + 2;
+    // find until next \r\n
+    size_t value_end = content.find("\r\n", value_start);
 
-    size_t pos = 0;
+    // if a final \r\n can't be found, assume it's until the end of the file
+    if (value_end == std::string::npos) value_end = content.size();
 
-    while (pos < normalized.size()) {
-        size_t line_end = normalized.find('\n', pos);
-
-        if (line_end == std::string::npos) {
-            line_end = normalized.size();
-        }
-
-        std::string line = normalized.substr(pos, line_end - pos);
-
-        if (line == wanted_key) {
-            // Hem trobat [CLAU].
-            // Ara busquem la primera línia no buida després de la clau.
-            pos = line_end + 1;
-
-            while (pos < normalized.size()) {
-                size_t value_end = normalized.find('\n', pos);
-
-                if (value_end == std::string::npos) {
-                    value_end = normalized.size();
-                }
-
-                std::string value = normalized.substr(pos, value_end - pos);
-
-                if (!value.empty()) {
-                    return value;
-                }
-
-                pos = value_end + 1;
-            }
-
-            return "key_not_found";
-        }
-
-        pos = line_end + 1;
-    }
-
-    return "key_not_found";
+    return content.substr(value_start, value_end - value_start);
 }
 
-FRESULT write_config(const std::string& filename,
-                     const std::string& key,
-                     const std::string& value)
-{
+FRESULT write_config(const std::string& filename, const std::string& key, const std::string& value) {
     if (filename.empty() || key.empty()) {
         return FR_INVALID_PARAMETER;
     }
-
-    // Evitem claus que trenquin el format [CLAU]
-    if (key.find('\r') != std::string::npos ||
-        key.find('\n') != std::string::npos ||
-        key.find('[')  != std::string::npos ||
-        key.find(']')  != std::string::npos) {
-        return FR_INVALID_NAME;
-    }
-
+ 
     // Primer mirem si la clau ja existeix
     std::string current_value = read_config(filename, key);
 
