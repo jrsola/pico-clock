@@ -80,3 +80,23 @@ void myScreen::writexy(int x, int y, const std::string_view &t, const std::strin
         this->update();
     }
 }
+
+void myScreen::draw_logo() {
+    const int scale = 2;
+
+    int x = (WIDTH - logo_width * scale) / 2;
+    int y = (HEIGHT - logo_height * scale) / 2;
+
+    for (int iy = 0; iy < logo_height; iy++) {
+        for (int ix = 0; ix < logo_width; ix++) {
+            uint8_t color = logo[iy * logo_width + ix];
+
+            screen.set_pen(color);
+            
+            int px = x + ix * scale;
+            int py = y + iy * scale;
+            
+            screen.rectangle(pimoroni::Rect(px,py, scale, scale));
+        }
+    }
+}

@@ -5,6 +5,7 @@
 #include "pico_graphics.hpp"
 #include "st7789.hpp"
 #include "color.h"
+#include "logo_rgb332.h"
 
 using namespace pimoroni;
 
@@ -35,4 +36,5 @@ public:
     void rectangle(int x, int y, int width, int height);
     void writeln(const std::string_view &t = "", const std::string& color_name = "");
     void writexy(int x, int y, const std::string_view &t = "", const std::string& color_name = "");
+    void draw_logo();
 };
