@@ -83,20 +83,50 @@ void myScreen::writexy(int x, int y, const std::string_view &t, const std::strin
 
 void myScreen::draw_logo() {
     const int scale = 2;
+    const int border = 4;
+    const int text_gap = 8;
 
-    int x = (WIDTH - logo_width * scale) / 2;
-    int y = (HEIGHT - logo_height * scale) / 2;
+    const int logo_scaled_width = logo_width * scale;
+    const int logo_scaled_height = logo_height * scale;
 
+    const int total_width = logo_scaled_width + border * 2;
+    const int total_height = logo_scaled_height + border * 2;
+
+    const int frame_x = (WIDTH - total_width) / 2;
+    const int frame_y = 20;
+
+    const int logo_x = frame_x + border;
+    const int logo_y = frame_y + border;
+
+    uint8_t grey = 0x92;
+
+    // Draw frame
+    screen.set_pen(grey);
+    screen.rectangle(pimoroni::Rect(frame_x, frame_y, total_width, total_height));
+
+    // Draw logo scaled 2x
     for (int iy = 0; iy < logo_height; iy++) {
         for (int ix = 0; ix < logo_width; ix++) {
             uint8_t color = logo[iy * logo_width + ix];
 
             screen.set_pen(color);
-            
-            int px = x + ix * scale;
-            int py = y + iy * scale;
-            
-            screen.rectangle(pimoroni::Rect(px,py, scale, scale));
+
+            int px = logo_x + ix * scale;
+            int py = logo_y + iy * scale;
+
+            screen.rectangle(pimoroni::Rect(px, py, scale, scale));
         }
+        this->update();
+        sleep_ms(20);
     }
+
+    // Draw centered title under logo
+    const std::string title = "PICO CLOCK";
+
+    int text_width = screen.measure_text(title);
+    int text_x = (WIDTH - text_width) / 2;
+    int text_y = frame_y + total_height + text_gap;
+
+    // writexy adds +5 and +2 internally, so compensate here
+    myScreen::writexy(text_x - 5, text_y - 2, title, "yellow");
 }

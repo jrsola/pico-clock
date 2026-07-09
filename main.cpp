@@ -212,9 +212,6 @@ int main() {
     // Initialize FATFS & file system 
     init_filesystem();
 
-    screen.draw_logo();
-    screen.update();
-
     // Mount or format LittleFS partition
     //std::string config_file = "BOOTCNT.TXT"; // FAT12 (8.3)
     //std::string boot_count;
@@ -255,6 +252,10 @@ int main() {
     std::string time_string;
     led.set_rgb("light blue");
     time_string = get_time();
+
+    screen.set_pen("black");
+    screen.clear();
+    screen.draw_logo();
 
     while(true) {
         buttonmgr.update();
