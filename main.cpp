@@ -65,9 +65,9 @@ void init_wifi(){
     cyw43_arch_enable_sta_mode();
 
     // Connect to WiFi network
-    write_config("CONFIG.TXT", "WIFI_NAME", "HYPNOSIS_2.4G");
-    std::string wifi_name = read_config("CONFIG.TXT", "WIFI_NAME");
-    std::string wifi_password = read_config("CONFIG.TXT", "WIFI_PASSWORD");
+    write_key("CONFIG.TXT", "WIFI_NAME", "HYPNOSIS_2.4G");
+    std::string wifi_name = read_key("CONFIG.TXT", "WIFI_NAME");
+    std::string wifi_password = read_key("CONFIG.TXT", "WIFI_PASSWORD");
     screen.writeln(wifi_name,"orange");
     screen.writeln(wifi_password,"orange");
     screen.update();
@@ -197,16 +197,7 @@ void init_filesystem(){
             sleep_ms(1000);
         }
  
-    // // checks if the CONFIG.TXT file exists. 
-    // // If it does not, it creates an empty one.
-    // if (!file_exists("CONFIG.TXT")) {
-    //     screen.writeln("NO CONFIG FILE FOUND", "yellow");
-    //     //write_file("/CONFIG.TXT","WIFI_NAME\r\nWIFI_PASSWORD\r\n");
-    //     screen.writeln("CONFIG FILE CREATED", "green");
-    //     unmountfs();
-    //     screen.writeln("CONNECT TO PC", "orange");
-    //     screen.writeln("EDIT CONFIG.TXT", "orange");
-    //     screen.writeln("THEN EJECT", "orange");
+
 }
 
 
@@ -220,7 +211,6 @@ int main() {
  
     // Initialize FATFS & file system 
     init_filesystem();
-    // usb_msc_init();
 
     // Mount or format LittleFS partition
     //std::string config_file = "BOOTCNT.TXT"; // FAT12 (8.3)
@@ -248,12 +238,12 @@ int main() {
 
 
     init_wifi();
-    init_sntp("pool.ntp.org");
+    //init_sntp("pool.ntp.org");
 
     //screen.writeln("SYNCRONIZING TIME","white");
-    while (!time_synched) {
-        sleep_ms(50); // wait for sntp to sync clock
-    }
+    // while (!time_synched) {
+    //     sleep_ms(50); // wait for sntp to sync clock
+    // }
     //screen.writeln("TIME SYCHRONIZED","green");
     screen.writeln(); // empty line
 

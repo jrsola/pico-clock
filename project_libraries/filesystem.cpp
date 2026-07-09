@@ -72,144 +72,161 @@ FRESULT file_exists(const char* path){
     return f_stat(path, &finfo);
 }
 
+// loads the content of a config file into a string
+FRESULT load_config(const std::string& filename, std::string* content){
+    
+    // if filename is empty or pointer to content is null, return error
+    if (filename.empty() || content == nullptr) return FR_INVALID_NAME;
+
+    // if file does not exist, return error
+    if (file_exists(filename.c_str()) != FR_OK) return res;
+
+    // empty content
+    content->clear();
+
+    FIL file;
+    FRESULT res = f_open(&file, filename.c_str(), FA_READ);
+
+    // if we could not open the file for reading, error
+    if (res != FR_OK) return res;
+
+    FSIZE_t file_size = f_size(&file);
+    
+    // if file is empty, return OK, but content will be null
+    if (file_size == 0){
+        f_close(&file);
+        return FR_OK;
+    }
+    
+    content->resize(file_size);
+
+    // read the content 
+    UINT bytes_read = 0;
+    res = f_read(&file, content->data(), file_size, &bytes_read);
+    f_close(&file);
+
+    // if there was any error reading the file, error
+    if (res != FR_OK) {
+        content->clear();
+        return res;
+    }
+
+    // resize content to the actual bytes read
+    content->resize(bytes_read);
+
+    normalize_text(content);
+
+    return FR_OK;
+}
+
+// normalizes the line endings in a text, so all becomes \n only.
+void normalize_text(std::string* text){
+    if (text == nullptr) return;
+    // prepare the normalized string with same size as the original one
+    std::string normalized;
+    normalized.reserve(text->size());
+
+    // run thru the text, replacing \r\n -> \n
+    for (size_t i = 0; i < text->size(); i++){
+        char c = (*text)[i];
+
+        if (c == '\r'){
+            c = '\n';
+            // if next char is a \n skip it next
+             if (i + 1 < text->size() && (*text)[i + 1] == '\n') i++;
+        } 
+        normalized.push_back(c);
+    }
+
+    // if the end of the file does not end in \n, add one.
+    if (!normalized.empty() && normalized.back() != '\n') {
+        normalized.push_back('\n');
+    }
+    *text = normalized;
+} 
+
 
 // looks for a key in the configuration file and returns its value
 // if the key can't be found it returns the value "key_not_found"
-std::string read_config(const std::string& filename, const std::string& key) {
+std::string read_key(const std::string& filename, const std::string& key) {
 
     // if we did not pass a filename or key, return an empty string
     if (filename.empty() || key.empty()) return "";
 
-    // if config file does not exist, return empty string
-    if (file_exists(filename.c_str()) != FR_OK) return "";
-
-    // file exists
-    FIL file;
-    res = f_open(&file, filename.c_str(), FA_READ);
-
-    // file exists, but it's empty, return empty string 
-    if (f_size(&file) == 0) {
-        f_close(&file);
-        return "";
-    }
-
-    // read file contents in a string, resized to match the filesize.
     std::string content;
-    content.resize(f_size(&file));
 
-    UINT bytes_read = 0;
-    FRESULT res = f_read(&file, content.data(), f_size(&file), &bytes_read);
-    f_close(&file);
+    FRESULT res = load_config(filename, &content);
 
-    content.resize(bytes_read);
-
-    std::string lookup_key = "[" + key + "]";
+    // if errors were found or config file is  empty, return empty string
+    if (res != FR_OK || content.empty()) return "";
+    
+    // look for the key in the configuration
+    std::string lookup_key = "[" + key + "]\n";
     size_t key_pos = content.find(lookup_key);
 
-    // npos = no position = lookup key not found, return empty string
+    // if the key could not be found, return empty string
     if (key_pos == std::string::npos) return "";
 
-    // place pointer just after [key] + \r\n (2)
-    size_t value_start = key_pos + lookup_key.length() + 2;
-    // find until next \r\n
-    size_t value_end = content.find("\r\n", value_start);
+    // start from end of key
+    size_t value_start = key_pos + lookup_key.length();
 
-    // if a final \r\n can't be found, assume it's until the end of the file
-    if (value_end == std::string::npos) value_end = content.size();
+    // locate the next \n and the value should be between the two
+    size_t value_end = content.find('\n', value_start); 
+
+    // if there is no other \n, take the end of the file
+    if (value_end == std::string::npos) value_end = content.size(); 
 
     return content.substr(value_start, value_end - value_start);
 }
 
-FRESULT write_config(const std::string& filename, const std::string& key, const std::string& value) {
+FRESULT write_key(const std::string& filename, const std::string& key, const std::string& value) {
 
+    // if no filename or key, then return error
     if (filename.empty() || key.empty()) return FR_INVALID_NAME;
 
-    if (file_exists(filename.c_str()) != FR_OK) return FR_NO_FILE;
-
-    // config file exists
-    FIL file;
-    FRESULT res = f_open(&file, filename.c_str(), FA_READ);
-    
-    if (res != FR_OK) {
-        return res;
-    }
-
-    FSIZE_t file_size = f_size(&file);
-
     std::string content;
-    content.resize(file_size);
 
-    UINT bytes_read = 0;
-    res = f_read(&file, content.data(), file_size, &bytes_read);
+    FRESULT res = load_config(filename, &content);
 
-    f_close(&file);
+    // if we could not load the config file, return error
+    if (res != FR_OK) return res;
 
-    if (res != FR_OK) {
-        return res;
-    }
+    std::string current_value = read_key(filename, key);
 
-    content.resize(bytes_read);
+    // key exists, replace value
+    if (current_value != ""){
+        size_t key_pos = content.find("["+key+"]");
+        size_t value_start = key_pos + key.length()+3; // 2 for [] + \n
+        size_t value_end = content.find('\n', value_start);
 
-    // Busquem la clau
-    std::string lookup_key = key;
-    size_t key_pos = content.find(lookup_key);
-
-    if (key_pos == std::string::npos) {
-        // La clau no existeix: l'afegim al final
-
-        if (!content.empty()) {
-            if (content.size() < 2 ||
-                content.substr(content.size() - 2) != "\r\n") {
-                content += "\r\n";
-            }
-        }
-
-        content += lookup_key;
-        content += "\r\n";
-        content += value;
-        content += "\r\n";
-    } else {
-        // La clau existeix: actualitzem el valor
-
-        size_t value_start = key_pos + lookup_key.length() + 2;
-
-        if (value_start > content.size()) {
-            return FR_INVALID_OBJECT;
-        }
-
-        size_t value_end = content.find("\r\n", value_start);
-
-        if (value_end == std::string::npos) {
-            value_end = content.size();
-        }
+        if(value_end == std::string::npos) value_end = content.size();
 
         content.replace(value_start, value_end - value_start, value);
+    } else {
+        // key does not exist, create key/value at the end
+        if (!content.empty() && content.back() != '\n') {
+            content.push_back('\n');
+        }
+
+        content += "["+key+"]";
+        content += "\n";
+        content += value;
+        content += "\n";
     }
 
-    // Ara sobreescrivim el fitxer complet amb el contingut actualitzat
+    // Overwrite the updated config file
+    FIL file;
     res = f_open(&file, filename.c_str(), FA_WRITE | FA_CREATE_ALWAYS);
 
-    if (res != FR_OK) {
-        return res;
-    }
+    if (res != FR_OK) return res;
 
     UINT bytes_written = 0;
 
-    res = f_write(
-        &file,
-        content.c_str(),
-        content.size(),
-        &bytes_written
-    );
+    res = f_write(&file, content.c_str(), content.size(), &bytes_written);
 
     if (res != FR_OK) {
         f_close(&file);
         return res;
-    }
-
-    if (bytes_written != content.size()) {
-        f_close(&file);
-        return FR_DISK_ERR;
     }
 
     res = f_sync(&file);
@@ -223,6 +240,7 @@ FRESULT write_config(const std::string& filename, const std::string& key, const 
 
     if (res == FR_OK) {
         ram_disk_mark_dirty();
+        ram_disk_flush_to_flash();
     }
 
     return res;
