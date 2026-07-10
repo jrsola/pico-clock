@@ -15,7 +15,10 @@ const std::map<std::string, std::tuple<uint8_t, uint8_t, uint8_t>> Color::color_
     {"light blue",  {173,216,230}},
     {"light green", {144,238,144}},
     {"dark blue",   {0,0,139}},
-    {"dark green",  {1,50,32}}
+    {"dark green",  {1,50,32}},
+    {"light grey",  {192,192,192}},
+    {"grey",        {128,128,128}},
+    {"dark grey",   {64,64,64}}
 };
 
 std::tuple<uint8_t, uint8_t, uint8_t> Color::get_rgb(const std::string& color_name) {
@@ -36,4 +39,28 @@ std::string Color::get_color_name(const std::tuple<uint8_t, uint8_t, uint8_t>& r
         }
     }
     return "";
+}
+
+uint8_t Color::get_rgb332(const std::string& color_name) {
+    auto [r, g, b] = get_rgb(color_name);
+
+    uint8_t r3 = r >> 5;  // 8 bits -> 3 bits
+    uint8_t g3 = g >> 5;  // 8 bits -> 3 bits
+    uint8_t b2 = b >> 6;  // 8 bits -> 2 bits
+
+    return (r3 << 5) | (g3 << 2) | b2;
+}
+
+uint8_t Color::fade_rgb332(uint8_t color, uint8_t brightness) {
+    // brightness: 0 = black, 255 = original color
+
+    uint8_t r3 = (color >> 5) & 0x07;
+    uint8_t g3 = (color >> 2) & 0x07;
+    uint8_t b2 = color & 0x03;
+
+    r3 = (r3 * brightness) / 255;
+    g3 = (g3 * brightness) / 255;
+    b2 = (b2 * brightness) / 255;
+
+    return (r3 << 5) | (g3 << 2) | b2;
 }

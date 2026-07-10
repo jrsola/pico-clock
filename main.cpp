@@ -41,43 +41,32 @@ ButtonManager buttonmgr;
 // Instantiate LED
 myLED led;
 
-void init_screen(){
-    screen.set_brightness(200);
-    screen.set_pen("light blue");
-    screen.clear();
-    screen.update();
-    sleep_ms(1000);
-    screen.set_pen("dark blue");
-    screen.rectangle(10,10,screen.get_width()-20, screen.get_height()-20);
-    screen.update(); 
-    screen.writeln("SCREEN: OK","white");
-}
-
 // Initialize WiFi chipset
 void init_wifi(){
     if(cyw43_arch_init()) {
-        screen.writeln("ERROR INITIALIZING WIFI CHIPSET", "red");
+        screen.show_boot_status("ERROR INITIALIZING WIFI CHIPSET", "red");
+        sleep_ms(3000);
+        watchdog_reboot(0,0,0);
     } else {
-        screen.writeln("WIFI CHIPSET: OK", "white");
+        screen.show_boot_status("WIFI CHIPSET OK", "green");
     }
 
     // Enable chipset operation
     cyw43_arch_enable_sta_mode();
+    screen.show_boot_status("WIFI ARCH OK", "green");
 
     // Connect to WiFi network
-    write_key("CONFIG.TXT", "WIFI_NAME", "HYPNOSIS_2.4G");
     std::string wifi_name = read_key("CONFIG.TXT", "WIFI_NAME");
     std::string wifi_password = read_key("CONFIG.TXT", "WIFI_PASSWORD");
-    screen.writeln(wifi_name,"orange");
-    screen.writeln(wifi_password,"orange");
-    screen.update();
+    screen.show_boot_status("WIFI CONFIG FOUND", "green");
 
     for(int attempt = 0; attempt < 3; attempt++){
         if (cyw43_arch_wifi_connect_timeout_ms(wifi_name.c_str(), wifi_password.c_str(), CYW43_AUTH_WPA2_AES_PSK, 30000)) {
-            std::string msg = "ERROR IN WIFI NETWORK #" + std::to_string(attempt+1);
-            screen.writeln(msg, "red");
+            std::string msg = "TRYING TO CONNECT TO WIFI #" + std::to_string(attempt+1);
+            screen.show_boot_status(msg, "orange");
         } else {
-            screen.writeln("WIFI NETWORK: OK", "white");
+            screen.show_boot_status("CONNECTED TO WIFI NETWORK", "green");
+            sleep_ms(2000);
             break;
         }
     }
@@ -88,14 +77,13 @@ void init_sntp(std::string sntp_server) {
     sntp_setservername(0, sntp_server.c_str());   // Set NTP server
     sntp_init();  // Start SNTP service
 
-    screen.writeln("SNTP SERVER FOUND: OK", "pink");
-    led.set_rgb("pink");
+    screen.show_boot_status("SNTP SERVER FOUND", "green");
+
 }
 
 bool time_synched = false;
 void sntp_callback(time_t sec, suseconds_t us) {
     time_synched = true;
-    led.set_rgb("orange");
     struct timeval tv = {sec, us};
     settimeofday(&tv, NULL);
 }
@@ -127,77 +115,83 @@ std::string info_voltage(){
 }
 
 void expose_drive(){
-    FRESULT res = unmountfs();
-    if (res != FR_OK) {
-        screen.writeln("UNMOUNT FS FAIL", "red");
-        screen.update();
-        return;
-    }
-    screen.writeln("FS UNMOUNTED", "green");
-    screen.update();
-
+    unmountfs();
+    sleep_ms(1000);
     usb_msc_init();
-
-    while(pico_mounted()){
-        tud_task();
-        sleep_ms(10);
-    }
-
-    screen.writeln("UNMOUNTED", "white");
-    screen.update();
-    
-    ram_disk_flush_to_flash();
-
-    tud_disconnect();
-
     sleep_ms(1000);
 
-    mountfs();
-    screen.writeln("RETURNING", "white");
-    screen.update();
+    absolute_time_t last_status_update = get_absolute_time();
+
+    screen.show_boot_status("PICO IS AVAILABLE ON YOUR PC");
+    while(pico_mounted()){
+        tud_task();
+
+        absolute_time_t now = get_absolute_time();
+
+        if (absolute_time_diff_us(last_status_update, now) >= 1000000) {
+            screen.show_boot_status("PICO IS AVAILABLE ON YOUR PC");
+            last_status_update = now;
+        } else {
+            sleep_ms(1);
+        }
+    }
+
+    screen.show_boot_status("PICO EJECTED", "green");
+    ram_disk_flush_to_flash();
+    sleep_ms(5000);
+
+    screen.show_boot_status("REBOOTING...", "red");
+    sleep_ms(5000);
+    watchdog_reboot(0,0,0);
+    // just waiting for the reboot
+    while(true){
+        sleep_ms(1000);
+    }
+}
+
+void init_config_file(){
+    screen.show_boot_status("CREATING CONFIG FILE.");
+    write_key("CONFIG.TXT", "WIFI_NAME", "WRITE WIFI NAME HERE");
+    screen.show_boot_status("CREATING CONFIG FILE..");
+    write_key("CONFIG.TXT", "WIFI_PASSWORD", "WRITE WIFI PASSWORD HERE");
+    screen.show_boot_status("CREATING CONFIG FILE...");
 }
 
 void init_filesystem(){
-    screen.writeln("INITIALIZING FILESYSTEM: ", "white");
-    screen.update();
 
     ram_disk_load_from_flash();
     FRESULT res = mountfs();
 
     if (res == FR_OK) {
-        screen.writeln("FILESYSTEM OK: ", "green");
-        screen.update();
+        screen.show_boot_status("FILESYSTEM MOUNTED", "green");
+        // filesystem exists, but there is no CONFIG file
+        if (file_exists("CONFIG.TXT") != FR_OK){
+            init_config_file();
+        }
         return;
     } else {
         ram_disk_format_fat12();
         ram_disk_flush_to_flash();
-        screen.writeln("FILESYSTEM FORMATTED", "orange");
+        screen.show_boot_status("FILESYSTEM FORMATTED", "orange");
     }
 
     ram_disk_load_from_flash();
     res = mountfs();
 
     if (res == FR_OK) {
-        screen.writeln("FILESYSTEM OK: ", "green");
-        screen.update();
+        screen.show_boot_status("FILESYSTEM MOUNTED", "green");
     } else {
-        screen.writeln("FILESYSTEM ERROR", "red");
+        screen.show_boot_status("FILESYSTEM ERROR", "red");
+        sleep_ms(5000); // need to decide what to do here
     }
 
-    while(true){
-        sleep_ms(1000);
-    }
+    // create the config file
+    init_config_file();
 
+    sleep_ms(3000);
+    screen.show_boot_status("CONFIGURE WIFI FROM YOUR PC");
+    sleep_ms(5000);
     expose_drive();
-
-    screen.writeln("REBOOTING...", "white");
-        sleep_ms(5000);
-        watchdog_reboot(0,0,0);
-        while(true){
-            sleep_ms(1000);
-        }
- 
-
 }
 
 
@@ -206,56 +200,34 @@ int main() {
     // Initialize Pico
     stdio_init_all();
 
-    // Initialize screen 
-    init_screen();
- 
-    // Initialize FATFS & file system 
-    init_filesystem();
-
-    // Mount or format LittleFS partition
-    //std::string config_file = "BOOTCNT.TXT"; // FAT12 (8.3)
-    //std::string boot_count;
-    /* boot_count = readfilestr(config_file);
-    boot_count = "1";
-    if (boot_count == "ERROR") {
-        boot_count = "0";
-        int err = writefilestr(config_file, boot_count);
-        if  (err != FR_OK) screen.writeln("I DID NOT WRITE WELL");
-    } */
-    //createconfig(config_file, "MIMAMAMEMIMA");
-    //boot_count = std::to_string(std::stoi(boot_count)+1); // Add 1 to bootcount
-    //writefilestr(config_file, boot_count);
-    //boot_count = readfilestr(config_file);
-    //screen.writeln("NUMBER OF BOOTUPS: " + boot_count,"white");
-
-    //boot_count = std::to_string(std::stoi(boot_count) + 1);
-    //write2file("boot_count.cfg",boot_count);
-    //screen.writeln("NUMBER OF BOOTUPS: " + boot_count,"white");
-    std::string board_id = info_board();
-    screen.writeln("BOARD ID: " + board_id,"green");
-    std::string voltage_id = info_voltage();
-    //screen.writeln("VOLTAGE: " + voltage_id + "V","pink");
-
-
-    init_wifi();
-    //init_sntp("pool.ntp.org");
-
-    //screen.writeln("SYNCRONIZING TIME","white");
-    // while (!time_synched) {
-    //     sleep_ms(50); // wait for sntp to sync clock
-    // }
-    //screen.writeln("TIME SYCHRONIZED","green");
-    screen.writeln(); // empty line
-
-    screen.writeln("TIME IS: ", "orange");
-
-    std::string time_string;
-    led.set_rgb("light blue");
-    time_string = get_time();
-
+    // bootup screen 
     screen.set_pen("black");
     screen.clear();
-    screen.draw_logo();
+    screen.show_boot_status("INITIALIZING SCREEN...");
+    screen.draw_logo("PICO CLOCK");
+    screen.show_boot_status("SCREEN OK", "green");
+
+    // FATFS & file system 
+    screen.show_boot_status("INITIALIZING FILESYSTEM...");
+    init_filesystem();
+
+ 
+    // this needs to be moved to a function button screeen 
+    // std::string board_id = info_board();
+    // screen.writeln("BOARD ID: " + board_id,"green");
+    // std::string voltage_id = info_voltage();
+    // //screen.writeln("VOLTAGE: " + voltage_id + "V","pink");
+
+    init_wifi();
+    init_sntp("pool.ntp.org");
+
+    screen.show_boot_status("SYNCHRONIZING TIME...");
+    while (!time_synched) {
+        sleep_ms(50); // wait for sntp to sync clock
+    }
+    screen.show_boot_status("TIME IS SYNCHRONIZED", "green");
+
+    std::string time_string;
 
     while(true) {
         buttonmgr.update();
@@ -267,6 +239,8 @@ int main() {
     } else if (buttonmgr.is_bootsel_single()) {
         watchdog_reboot(0, 0, 1000);
     }
+    time_string = "CURRENT TIME: " + get_time();
+    screen.show_boot_status(time_string, "yellow");
     led.blink_update();
     screen.update();
     }

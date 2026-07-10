@@ -19,6 +19,7 @@ private:
     std::vector<uint8_t> frame_buffer;
     pimoroni::PicoGraphics_PenRGB332 screen;
     int textx, texty, twidth;
+    int progress_segments = 0;
 
 public:
     myScreen();
@@ -35,6 +36,8 @@ public:
     void update();
     void rectangle(int x, int y, int width, int height);
     void writeln(const std::string_view &t = "", const std::string& color_name = "");
-    void writexy(int x, int y, const std::string_view &t = "", const std::string& color_name = "");
-    void draw_logo();
+    void writexy(int x, int y, const std::string_view &t = "", const std::string& color_name = "", int scale = 2);
+    void draw_logo(const std::string& title = "");
+    void progress_bar(int segments = -1);
+    void show_boot_status(std::string_view text = "", const std::string& color_name = "white");
 };
