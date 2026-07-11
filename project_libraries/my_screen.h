@@ -20,6 +20,7 @@ private:
     pimoroni::PicoGraphics_PenRGB332 screen;
     int textx, texty, twidth;
     int progress_segments = 0;
+    std::string boot_message = "";
 
 public:
     myScreen();
@@ -39,5 +40,5 @@ public:
     void writexy(int x, int y, const std::string_view &t = "", const std::string& color_name = "", int scale = 2);
     void draw_logo(const std::string& title = "");
     void progress_bar(int segments = -1);
-    void show_boot_status(std::string_view text = "", const std::string& color_name = "white");
+    void show_boot_message(std::string_view boot_msg = "", const std::string& color_name = "white");
 };

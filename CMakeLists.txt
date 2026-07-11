@@ -82,6 +82,7 @@ add_executable(${NAME}
     project_libraries/filesystem.cpp
     project_libraries/usb_descriptors.cpp
     project_libraries/ram_disk.cpp
+    project_libraries/network.cpp
 )
 
 target_include_directories(${NAME} PRIVATE

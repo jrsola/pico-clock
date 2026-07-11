@@ -120,7 +120,7 @@ void myScreen::draw_logo(const std::string& title) {
         this->update();
         sleep_ms(delay);
     }
-
+    sleep_ms(delay*3);
     // Draw centered title under logo
     const int title_scale = 3;
     int text_width = screen.measure_text(title, title_scale);
@@ -129,12 +129,15 @@ void myScreen::draw_logo(const std::string& title) {
 
     // writexy adds +5 and +2 internally, so compensate here
     myScreen::writexy(text_x - 5, text_y - 2, title, "yellow", title_scale);
+    this->update();
+    sleep_ms(delay*5);
+
 }
 
 void myScreen::progress_bar(int segments) {
     const int bar_width = 120;
     const int bar_height = 10;
-    const int total_segments = 20;
+    const int total_segments = 12;
     const int segment_width = 6;
 
     const int x = (WIDTH - bar_width) / 2;
@@ -178,7 +181,8 @@ void myScreen::progress_bar(int segments) {
     this->update();
 }
 
-void myScreen::show_boot_status(std::string_view text, const std::string& color_name) {
+void myScreen::show_boot_message(std::string_view message, const std::string& color_name) {
+    
     const int status_height = 16;
     const int status_x = 0;
     const int status_y = HEIGHT - 45;
@@ -188,11 +192,11 @@ void myScreen::show_boot_status(std::string_view text, const std::string& color_
     this->rectangle(status_x, status_y, WIDTH, status_height);
 
     // Write status text
-    if (!text.empty()) {
+    if (!message.empty()) {
         this->set_pen(color_name);
-        int text_width = screen.measure_text(text);
+        int text_width = screen.measure_text(message);
         int text_x = (WIDTH - text_width) / 2;
-        screen.text(text, pimoroni::Point(text_x, status_y), WIDTH);
+        screen.text(message, pimoroni::Point(text_x, status_y), WIDTH);
     }
     this->progress_bar();
     this->update();
