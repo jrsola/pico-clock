@@ -4,11 +4,15 @@ myScreen::myScreen() : frame_buffer(WIDTH * HEIGHT),
                        screen(WIDTH, HEIGHT, frame_buffer.data()),
                        st7789(WIDTH, HEIGHT, ROTATE_0, false, get_spi_pins(BG_SPI_FRONT)) {
     this->set_brightness(this->backlight);
-    this->set_pen("white");
+    this->textx = 10;
+    this->texty = 10;
+    this->twidth = WIDTH - 20 - 10;
     this->clear();
-    this->update();
-    sleep_ms(2000);
 }
+
+//     this->textx = 10;
+//     this->texty = 10;
+//     this->twidth = WIDTH - 20 - 10;
 
 uint16_t myScreen::get_width() {
     return WIDTH;
@@ -50,11 +54,58 @@ void myScreen::pixel(const Point &p) {
     screen.pixel(p);
 }
 
-void myScreen::clear() {
-    this->textx = 10;
-    this->texty = 10;
-    this->twidth = WIDTH - 20 - 10;
-    screen.clear();
+void myScreen::clear(const std::string& color_name, int fade_steps, bool upd) {
+    this->background_color = color_name;
+    uint8_t target_color = Color::get_rgb332(color_name);
+
+    // Immediate clear
+    if (fade_steps <= 0) {
+        screen.set_pen(target_color);
+        this->rectangle(0, 0, WIDTH, HEIGHT);
+        this->update();
+        return;
+    }
+
+    auto step_towards_rgb332 = [](uint8_t from, uint8_t to) -> uint8_t {
+        int from_r = (from >> 5) & 0x07;
+        int from_g = (from >> 2) & 0x07;
+        int from_b = from & 0x03;
+
+        int to_r = (to >> 5) & 0x07;
+        int to_g = (to >> 2) & 0x07;
+        int to_b = to & 0x03;
+
+        if (from_r < to_r) from_r++;
+        else if (from_r > to_r) from_r--;
+
+        if (from_g < to_g) from_g++;
+        else if (from_g > to_g) from_g--;
+
+        if (from_b < to_b) from_b++;
+        else if (from_b > to_b) from_b--;
+
+        return (from_r << 5) | (from_g << 2) | from_b;
+    };
+
+    const int fade_delay = 30;
+    const int buffer_size = WIDTH * HEIGHT;
+
+    for (int step = 0; step < fade_steps; step++) {
+        for (int i = 0; i < buffer_size; i++) {
+            frame_buffer[i] = step_towards_rgb332(
+                frame_buffer[i],
+                target_color
+            );
+        }
+
+        this->update();
+        sleep_ms(fade_delay);
+    }
+
+    // Ensure final color is exact
+    screen.set_pen(target_color);
+    this->rectangle(0, 0, WIDTH, HEIGHT);
+    if (upd) this->update();
 }
 
 void myScreen::update() {
@@ -81,7 +132,7 @@ void myScreen::writexy(int x, int y, const std::string_view &t, const std::strin
     }
 }
 
-void myScreen::draw_logo(const std::string& title) {
+void myScreen::draw_logo(const std::string& title, const int steps, const int delay) {
     const int scale = 2;
     const int border = 4;
     const int y_spacing = 20;
@@ -98,10 +149,6 @@ void myScreen::draw_logo(const std::string& title) {
         (logo_width * scale) + (border * 2),
         (logo_height * scale) + (border * 2)
     );
-
-    // fade-in logo
-    const int steps = 15;
-    const int delay = 100;
 
     for (int round = 0; round <= steps; round++){
         uint8_t brightness = (255 * round) / steps;
@@ -177,8 +224,6 @@ void myScreen::progress_bar(int segments) {
             bar_height
         );
     }
-
-    this->update();
 }
 
 void myScreen::show_boot_message(std::string_view message, const std::string& color_name) {
@@ -188,7 +233,7 @@ void myScreen::show_boot_message(std::string_view message, const std::string& co
     const int status_y = HEIGHT - 45;
 
     // Clear status area
-    this->set_pen("black");
+    this->set_pen(background_color);
     this->rectangle(status_x, status_y, WIDTH, status_height);
 
     // Write status text
@@ -201,4 +246,259 @@ void myScreen::show_boot_message(std::string_view message, const std::string& co
     this->progress_bar();
     this->update();
     sleep_ms(500);
+}
+
+void myScreen::draw_clock_time(const std::string& clock_time,
+                               const std::string& color_name,
+                               int size) {
+    // Expected format: "12:34"
+    // Digits: 0-9
+    // Blank: _
+    // Separator: :
+    if (clock_time.length() != 5) {
+        return;
+    }
+
+    if (clock_time[2] != ':') {
+        return;
+    }
+
+    const int thickness = size;
+    const int length = size * 5;
+
+    const int digit_width = thickness * 2 + length;
+    const int digit_height = thickness * 3 + length * 2;
+
+    const int digit_gap = size * 2;
+    const int colon_width = size;
+    const int colon_gap = size * 2;
+
+    const int total_width =
+        digit_width * 4 +
+        digit_gap * 2 +
+        colon_gap * 2 +
+        colon_width;
+
+    const int x_start = (WIDTH - total_width) / 2;
+    const int y_start = (HEIGHT - digit_height) / 2;
+
+    auto draw_colon = [&](int x, int y) {
+        const int dot_size = size;
+
+        int upper_dot_y = y + digit_height / 3;
+        int lower_dot_y = y + (digit_height * 2) / 3;
+
+        time_t now = time(NULL);
+        struct tm* timeinfo = gmtime(&now);
+
+        bool show_colon = (timeinfo->tm_sec % 2) == 0;
+
+        // Clear only the colon area
+        this->set_pen(background_color);
+        this->rectangle(x, y, colon_width, digit_height);
+
+        // Draw colon only on even seconds
+        if (show_colon) {
+            this->set_pen(color_name);
+            this->rectangle(x, upper_dot_y, dot_size, dot_size);
+            this->rectangle(x, lower_dot_y, dot_size, dot_size);
+        }
+    };
+
+    // If time has not changed, only update the colon
+    if (clock_time == this->last_clock_time) {
+        int colon_x = x_start
+                    + digit_width + digit_gap
+                    + digit_width + colon_gap;
+
+        draw_colon(colon_x, y_start);
+
+        this->update();
+        return;
+    }
+
+    // Time has changed, so redraw the whole clock
+    this->last_clock_time = clock_time;
+
+    this->clear(background_color, 0, false);
+
+    this->set_pen(color_name);
+
+    auto draw_segment = [&](int x, int y, char segment) {
+        switch (segment) {
+            case 'A':
+                this->rectangle(
+                    x + thickness,
+                    y,
+                    length,
+                    thickness
+                );
+                break;
+
+            case 'B':
+                this->rectangle(
+                    x + thickness + length,
+                    y + thickness,
+                    thickness,
+                    length
+                );
+                break;
+
+            case 'C':
+                this->rectangle(
+                    x + thickness + length,
+                    y + thickness * 2 + length,
+                    thickness,
+                    length
+                );
+                break;
+
+            case 'D':
+                this->rectangle(
+                    x + thickness,
+                    y + thickness * 2 + length * 2,
+                    length,
+                    thickness
+                );
+                break;
+
+            case 'E':
+                this->rectangle(
+                    x,
+                    y + thickness * 2 + length,
+                    thickness,
+                    length
+                );
+                break;
+
+            case 'F':
+                this->rectangle(
+                    x,
+                    y + thickness,
+                    thickness,
+                    length
+                );
+                break;
+
+            case 'G':
+                this->rectangle(
+                    x + thickness,
+                    y + thickness + length,
+                    length,
+                    thickness
+                );
+                break;
+        }
+    };
+
+    auto draw_digit = [&](int x, int y, char c) {
+        if (c == '_') {
+            return;
+        }
+
+        if (c < '0' || c > '9') {
+            return;
+        }
+
+        int digit = c - '0';
+
+        switch (digit) {
+            case 0:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'C');
+                draw_segment(x, y, 'D');
+                draw_segment(x, y, 'E');
+                draw_segment(x, y, 'F');
+                break;
+
+            case 1:
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'C');
+                break;
+
+            case 2:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'G');
+                draw_segment(x, y, 'E');
+                draw_segment(x, y, 'D');
+                break;
+
+            case 3:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'G');
+                draw_segment(x, y, 'C');
+                draw_segment(x, y, 'D');
+                break;
+
+            case 4:
+                draw_segment(x, y, 'F');
+                draw_segment(x, y, 'G');
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'C');
+                break;
+
+            case 5:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'F');
+                draw_segment(x, y, 'G');
+                draw_segment(x, y, 'C');
+                draw_segment(x, y, 'D');
+                break;
+
+            case 6:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'F');
+                draw_segment(x, y, 'G');
+                draw_segment(x, y, 'E');
+                draw_segment(x, y, 'C');
+                draw_segment(x, y, 'D');
+                break;
+
+            case 7:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'C');
+                break;
+
+            case 8:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'C');
+                draw_segment(x, y, 'D');
+                draw_segment(x, y, 'E');
+                draw_segment(x, y, 'F');
+                draw_segment(x, y, 'G');
+                break;
+
+            case 9:
+                draw_segment(x, y, 'A');
+                draw_segment(x, y, 'B');
+                draw_segment(x, y, 'C');
+                draw_segment(x, y, 'D');
+                draw_segment(x, y, 'F');
+                draw_segment(x, y, 'G');
+                break;
+        }
+    };
+
+    int x = x_start;
+
+    draw_digit(x, y_start, clock_time[0]);
+    x += digit_width + digit_gap;
+
+    draw_digit(x, y_start, clock_time[1]);
+    x += digit_width + colon_gap;
+
+    draw_colon(x, y_start);
+    x += colon_width + colon_gap;
+
+    draw_digit(x, y_start, clock_time[3]);
+    x += digit_width + digit_gap;
+
+    draw_digit(x, y_start, clock_time[4]);
+
+    this->update();
 }

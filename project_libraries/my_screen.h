@@ -1,6 +1,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <ctime>
 #include "pico_display_2.hpp"
 #include "pico_graphics.hpp"
 #include "st7789.hpp"
@@ -18,9 +19,10 @@ private:
     ST7789 st7789;
     std::vector<uint8_t> frame_buffer;
     pimoroni::PicoGraphics_PenRGB332 screen;
+    std::string background_color = "black";
     int textx, texty, twidth;
     int progress_segments = 0;
-    std::string boot_message = "";
+    std::string last_clock_time = "";
 
 public:
     myScreen();
@@ -33,12 +35,13 @@ public:
     void set_pen(uint8_t r, uint8_t g, uint8_t b);
     std::tuple<uint8_t, uint8_t, uint8_t> get_pen();
     void pixel(const Point &p);
-    void clear();
+    void clear(const std::string& color_name = "black", int fade_steps = 0, bool upd = true);
     void update();
     void rectangle(int x, int y, int width, int height);
     void writeln(const std::string_view &t = "", const std::string& color_name = "");
     void writexy(int x, int y, const std::string_view &t = "", const std::string& color_name = "", int scale = 2);
-    void draw_logo(const std::string& title = "");
+    void draw_logo(const std::string& title = "", const int steps = 15, const int delay = 100);
     void progress_bar(int segments = -1);
     void show_boot_message(std::string_view boot_msg = "", const std::string& color_name = "white");
+    void draw_clock_time(const std::string& time, const std::string& color_name = "yellow", int size = 6);
 };

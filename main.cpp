@@ -50,7 +50,7 @@ std::string get_time(int tz_offset) {
     struct tm *timeinfo = localtime(&now);
     
     char buffer[9]; // "hh:mm:ss" format 9 chars (8+null)
-    snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+    snprintf(buffer, sizeof(buffer), "%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min);
     
     return std::string(buffer);
 } 
@@ -123,8 +123,7 @@ int main() {
     stdio_init_all();
 
     // initialize and bootup screen 
-    screen.set_pen("black");
-    screen.clear();
+    screen.clear("dark grey",5);
     screen.draw_logo("PICO CLOCK");
     screen.show_boot_message("SCREEN INITIALIZED", "green");
 
@@ -169,6 +168,7 @@ int main() {
     }
 
     // connect to WiFi network
+    screen.show_boot_message("CONNECTING TO WIFI NETWORK");
     if (wifi_connect(read_key("CONFIG.TXT", "WIFI_NAME"), read_key("CONFIG.TXT", "WIFI_PASSWORD"))){
         screen.show_boot_message("CONNECTED TO WIFI NETWORK", "green");
     } else {
@@ -197,6 +197,8 @@ int main() {
 
     std::string time_string;
 
+    screen.clear("black",20);
+
     while(true) {
         buttonmgr.update();
         //if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
@@ -204,8 +206,9 @@ int main() {
         if (buttonmgr.is_a())  expose_drive();
         if (buttonmgr.is_bootsel_single()) reboot();
 
-        time_string = "CURRENT TIME: " + get_time(tz_offset);
-        screen.show_boot_message(time_string, "yellow");
+        //time_string = "CURRENT TIME: " + get_time(tz_offset);
+        //screen.draw_clock_time(time_string, "white", 10);
+        screen.draw_clock_time(get_time(tz_offset), "white", 8);
         led.blink_update();
         screen.update();
     }

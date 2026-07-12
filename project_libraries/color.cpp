@@ -18,7 +18,7 @@ const std::map<std::string, std::tuple<uint8_t, uint8_t, uint8_t>> Color::color_
     {"dark green",  {1,50,32}},
     {"light grey",  {192,192,192}},
     {"grey",        {128,128,128}},
-    {"dark grey",   {64,64,64}}
+    {"dark grey",   {32,32,32}}
 };
 
 std::tuple<uint8_t, uint8_t, uint8_t> Color::get_rgb(const std::string& color_name) {
