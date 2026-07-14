@@ -7,6 +7,7 @@
 #include "st7789.hpp"
 #include "color.h"
 #include "logo_rgb332.h"
+#include "icons.h"
 
 using namespace pimoroni;
 
@@ -44,4 +45,5 @@ public:
     void progress_bar(int segments = -1);
     void show_boot_message(std::string_view boot_msg = "", const std::string& color_name = "white");
     void draw_clock_time(const std::string& time, const std::string& color_name = "yellow", int size = 6);
+    void draw_buttonhint (int corner, const std::string& color_name, const Icons::Icon& icon);
 };

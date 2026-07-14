@@ -248,6 +248,116 @@ void myScreen::show_boot_message(std::string_view message, const std::string& co
     sleep_ms(500);
 }
 
+void myScreen::draw_buttonhint(int corner,
+                               const std::string& color_name,
+                               const Icons::Icon& icon) {
+    const int radius = 24;
+
+    int origin_x = 0;
+    int origin_y = 0;
+
+    switch (corner) {
+        case 0: // top left
+            origin_x = 0;
+            origin_y = 0;
+            break;
+
+        case 1: // bottom left
+            origin_x = 0;
+            origin_y = HEIGHT - radius;
+            break;
+
+        case 2: // top right
+            origin_x = WIDTH - radius;
+            origin_y = 0;
+            break;
+
+        case 3: // bottom right
+            origin_x = WIDTH - radius;
+            origin_y = HEIGHT - radius;
+            break;
+
+        default:
+            return;
+    }
+
+    // Draw the corner
+    this->set_pen(color_name);
+
+    for (int y = 0; y < radius; y++) {
+        for (int x = 0; x < radius; x++) {
+            int dx = x;
+            int dy = y;
+
+            if (corner == 1) {
+                // bottom left: mirror Y
+                dy = radius - 1 - y;
+            } else if (corner == 2) {
+                // top right: mirror X
+                dx = radius - 1 - x;
+            } else if (corner == 3) {
+                // bottom right: mirror X and Y
+                dx = radius - 1 - x;
+                dy = radius - 1 - y;
+            }
+
+            if ((dx * dx + dy * dy) <= (radius * radius)) {
+                this->rectangle(origin_x + x, origin_y + y, 1, 1);
+            }
+        }
+    }
+
+    // Icon inside the corner, hollow using background color
+    const int icon_scale = 2;
+    const int icon_width = icon.width * icon_scale;
+    const int icon_height = icon.height * icon_scale;
+    const int icon_margin = 2;
+
+    int icon_x = origin_x + icon_margin;
+    int icon_y = origin_y + icon_margin;
+
+    switch (corner) {
+        case 0: // top left
+            icon_x = origin_x + icon_margin;
+            icon_y = origin_y + icon_margin;
+            break;
+
+        case 1: // bottom left
+            icon_x = origin_x + icon_margin;
+            icon_y = origin_y + radius - icon_height - icon_margin;
+            break;
+
+        case 2: // top right
+            icon_x = origin_x + radius - icon_width - icon_margin;
+            icon_y = origin_y + icon_margin;
+            break;
+
+        case 3: // bottom right
+            icon_x = origin_x + radius - icon_width - icon_margin;
+            icon_y = origin_y + radius - icon_height - icon_margin;
+            break;
+    }
+
+    this->set_pen(this->background_color);
+
+    for (int row = 0; row < icon.height; row++) {
+        uint8_t bits = icon.data[row];
+
+        for (int col = 0; col < icon.width; col++) {
+            bool pixel_on = bits & (1 << (7 - col));
+
+            if (pixel_on) {
+                this->rectangle(
+                    icon_x + col * icon_scale,
+                    icon_y + row * icon_scale,
+                    icon_scale,
+                    icon_scale
+                );
+            }
+        }
+    }
+}
+
 void myScreen::draw_clock_time(const std::string& clock_time,
                                const std::string& color_name,
                                int size) {
@@ -280,7 +390,15 @@ void myScreen::draw_clock_time(const std::string& clock_time,
         colon_width;
 
     const int x_start = (WIDTH - total_width) / 2;
-    const int y_start = (HEIGHT - digit_height) / 2;
+
+    // Keep clock below the top button hints
+    const int buttonhint_radius = 24;
+    const int buttonhint_gap = 20;
+
+    const int y_start = buttonhint_radius + buttonhint_gap;
+
+    // Extra margin around the clock when clearing its area
+    const int clear_margin = size;
 
     auto draw_colon = [&](int x, int y) {
         const int dot_size = size;
@@ -288,7 +406,7 @@ void myScreen::draw_clock_time(const std::string& clock_time,
         int upper_dot_y = y + digit_height / 3;
         int lower_dot_y = y + (digit_height * 2) / 3;
 
-        time_t now = time(NULL);
+        time_t now = ::time(NULL);
         struct tm* timeinfo = gmtime(&now);
 
         bool show_colon = (timeinfo->tm_sec % 2) == 0;
@@ -317,10 +435,16 @@ void myScreen::draw_clock_time(const std::string& clock_time,
         return;
     }
 
-    // Time has changed, so redraw the whole clock
+    // Time has changed, so redraw only the clock area
     this->last_clock_time = clock_time;
 
-    this->clear(background_color, 0, false);
+    this->set_pen(background_color);
+    this->rectangle(
+        x_start - clear_margin,
+        y_start - clear_margin,
+        total_width + clear_margin * 2,
+        digit_height + clear_margin * 2
+    );
 
     this->set_pen(color_name);
 

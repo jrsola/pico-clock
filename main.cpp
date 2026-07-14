@@ -15,6 +15,7 @@
 #include "ff.h"
 #include "diskio.h"
 
+
 #include "pico/unique_id.h"
 #include "hardware/adc.h"
 #include "hardware/watchdog.h"
@@ -123,7 +124,7 @@ int main() {
     stdio_init_all();
 
     // initialize and bootup screen 
-    screen.clear("dark grey",5);
+    screen.clear("dark blue",5);
     screen.draw_logo("PICO CLOCK");
     screen.show_boot_message("SCREEN INITIALIZED", "green");
 
@@ -199,6 +200,13 @@ int main() {
 
     screen.clear("black",20);
 
+    //draw initial buttonhints aka corners
+    screen.draw_buttonhint(0, "yellow", Icons::ASTERISK);
+    screen.draw_buttonhint(1, "red", Icons::HEART);
+    screen.draw_buttonhint(2, "light green", Icons::ASTERISK);
+    screen.draw_buttonhint(3, "blue", Icons::HEART);
+
+    // main loop
     while(true) {
         buttonmgr.update();
         //if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
