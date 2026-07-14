@@ -201,9 +201,9 @@ int main() {
     screen.clear("black",20);
 
     //draw initial buttonhints aka corners
-    screen.draw_buttonhint(0, "yellow", Icons::ASTERISK);
-    screen.draw_buttonhint(1, "red", Icons::HEART);
-    screen.draw_buttonhint(2, "light green", Icons::ASTERISK);
+    screen.draw_buttonhint(0, "yellow", Icons::ENTER);
+    screen.draw_buttonhint(1, "red", Icons::BACK);
+    screen.draw_buttonhint(2, "light green", Icons::RIGHT);
     screen.draw_buttonhint(3, "blue", Icons::HEART);
 
     // main loop
@@ -214,9 +214,7 @@ int main() {
         if (buttonmgr.is_a())  expose_drive();
         if (buttonmgr.is_bootsel_single()) reboot();
 
-        //time_string = "CURRENT TIME: " + get_time(tz_offset);
-        //screen.draw_clock_time(time_string, "white", 10);
-        screen.draw_clock_time(get_time(tz_offset), "white", 8);
+        screen.draw_clock_time(get_time(tz_offset), "white", 7);
         led.blink_update();
         screen.update();
     }

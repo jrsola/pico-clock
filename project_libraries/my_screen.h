@@ -44,6 +44,7 @@ public:
     void draw_logo(const std::string& title = "", const int steps = 15, const int delay = 100);
     void progress_bar(int segments = -1);
     void show_boot_message(std::string_view boot_msg = "", const std::string& color_name = "white");
-    void draw_clock_time(const std::string& time, const std::string& color_name = "yellow", int size = 6);
+    void draw_clock_time(int x, int y, const std::string& clock_time, const std::string& color_name = "yellow", int size = 6);
+    void draw_clock_time(const std::string& clock_time, const std::string& color_name = "yellow", int size = 6);
     void draw_buttonhint (int corner, const std::string& color_name, const Icons::Icon& icon);
 };

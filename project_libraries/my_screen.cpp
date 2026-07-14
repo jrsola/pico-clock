@@ -358,9 +358,12 @@ void myScreen::draw_buttonhint(int corner,
     }
 }
 
-void myScreen::draw_clock_time(const std::string& clock_time,
+void myScreen::draw_clock_time(int x_start,
+                               int y_start,
+                               const std::string& clock_time,
                                const std::string& color_name,
                                int size) {
+
     // Expected format: "12:34"
     // Digits: 0-9
     // Blank: _
@@ -374,10 +377,11 @@ void myScreen::draw_clock_time(const std::string& clock_time,
     }
 
     const int thickness = size;
-    const int length = size * 5;
+    const int horizontal_length = size * 5;
+    const int vertical_length = (horizontal_length * 7) / 4;
 
-    const int digit_width = thickness * 2 + length;
-    const int digit_height = thickness * 3 + length * 2;
+    const int digit_width = thickness * 2 + horizontal_length;
+    const int digit_height = thickness * 3 + vertical_length * 2;
 
     const int digit_gap = size * 2;
     const int colon_width = size;
@@ -389,15 +393,6 @@ void myScreen::draw_clock_time(const std::string& clock_time,
         colon_gap * 2 +
         colon_width;
 
-    const int x_start = (WIDTH - total_width) / 2;
-
-    // Keep clock below the top button hints
-    const int buttonhint_radius = 24;
-    const int buttonhint_gap = 20;
-
-    const int y_start = buttonhint_radius + buttonhint_gap;
-
-    // Extra margin around the clock when clearing its area
     const int clear_margin = size;
 
     auto draw_colon = [&](int x, int y) {
@@ -421,6 +416,9 @@ void myScreen::draw_clock_time(const std::string& clock_time,
             this->rectangle(x, upper_dot_y, dot_size, dot_size);
             this->rectangle(x, lower_dot_y, dot_size, dot_size);
         }
+
+        // Restore pen for following digits
+        this->set_pen(color_name);
     };
 
     // If time has not changed, only update the colon
@@ -431,7 +429,6 @@ void myScreen::draw_clock_time(const std::string& clock_time,
 
         draw_colon(colon_x, y_start);
 
-        this->update();
         return;
     }
 
@@ -446,42 +443,40 @@ void myScreen::draw_clock_time(const std::string& clock_time,
         digit_height + clear_margin * 2
     );
 
-    this->set_pen(color_name);
-
     auto draw_segment = [&](int x, int y, char segment) {
         switch (segment) {
             case 'A':
                 this->rectangle(
                     x + thickness,
                     y,
-                    length,
+                    horizontal_length,
                     thickness
                 );
                 break;
 
             case 'B':
                 this->rectangle(
-                    x + thickness + length,
+                    x + thickness + horizontal_length,
                     y + thickness,
                     thickness,
-                    length
+                    vertical_length
                 );
                 break;
 
             case 'C':
                 this->rectangle(
-                    x + thickness + length,
-                    y + thickness * 2 + length,
+                    x + thickness + horizontal_length,
+                    y + thickness * 2 + vertical_length,
                     thickness,
-                    length
+                    vertical_length
                 );
                 break;
 
             case 'D':
                 this->rectangle(
                     x + thickness,
-                    y + thickness * 2 + length * 2,
-                    length,
+                    y + thickness * 2 + vertical_length * 2,
+                    horizontal_length,
                     thickness
                 );
                 break;
@@ -489,9 +484,9 @@ void myScreen::draw_clock_time(const std::string& clock_time,
             case 'E':
                 this->rectangle(
                     x,
-                    y + thickness * 2 + length,
+                    y + thickness * 2 + vertical_length,
                     thickness,
-                    length
+                    vertical_length
                 );
                 break;
 
@@ -500,15 +495,15 @@ void myScreen::draw_clock_time(const std::string& clock_time,
                     x,
                     y + thickness,
                     thickness,
-                    length
+                    vertical_length
                 );
                 break;
 
             case 'G':
                 this->rectangle(
                     x + thickness,
-                    y + thickness + length,
-                    length,
+                    y + thickness + vertical_length,
+                    horizontal_length,
                     thickness
                 );
                 break;
@@ -610,6 +605,8 @@ void myScreen::draw_clock_time(const std::string& clock_time,
 
     int x = x_start;
 
+    this->set_pen(color_name);
+
     draw_digit(x, y_start, clock_time[0]);
     x += digit_width + digit_gap;
 
@@ -619,10 +616,35 @@ void myScreen::draw_clock_time(const std::string& clock_time,
     draw_colon(x, y_start);
     x += colon_width + colon_gap;
 
+    this->set_pen(color_name);
+
     draw_digit(x, y_start, clock_time[3]);
     x += digit_width + digit_gap;
 
     draw_digit(x, y_start, clock_time[4]);
+}
 
-    this->update();
+void myScreen::draw_clock_time(const std::string& clock_time,
+                               const std::string& color_name,
+                               int size) {
+    const int thickness = size;
+    const int horizontal_length = size * 5;
+    const int vertical_length = (horizontal_length * 7) / 4;
+
+    const int digit_width = thickness * 2 + horizontal_length;
+
+    const int digit_gap = size * 2;
+    const int colon_width = size;
+    const int colon_gap = size * 2;
+
+    const int total_width =
+        digit_width * 4 +
+        digit_gap * 2 +
+        colon_gap * 2 +
+        colon_width;
+
+    int x = (WIDTH - total_width) / 2;
+    int y = 30;
+
+    this->draw_clock_time(x, y, clock_time, color_name, size);
 }

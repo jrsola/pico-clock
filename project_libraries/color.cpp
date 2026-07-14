@@ -14,7 +14,7 @@ const std::map<std::string, std::tuple<uint8_t, uint8_t, uint8_t>> Color::color_
     {"pink",        {255,192,203}},
     {"light blue",  {173,216,230}},
     {"light green", {144,238,144}},
-    {"dark blue",   {0,0,139}},
+    {"dark blue",   {0,0,64}},
     {"dark green",  {1,50,32}},
     {"light grey",  {192,192,192}},
     {"grey",        {128,128,128}},
