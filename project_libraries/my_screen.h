@@ -11,6 +11,12 @@
 
 using namespace pimoroni;
 
+struct ButtonHint {
+    bool visible = false;
+    Icons::Icon icon = {nullptr, 0, 0};
+    std::string color = "";
+};
+
 class myScreen {
 private:
     const uint16_t WIDTH = 320;
@@ -24,6 +30,7 @@ private:
     int textx, texty, twidth;
     int progress_segments = 0;
     std::string last_clock_time = "";
+    ButtonHint buttonhint[4];
 
 public:
     myScreen();
@@ -46,5 +53,7 @@ public:
     void show_boot_message(std::string_view boot_msg = "", const std::string& color_name = "white");
     void draw_clock_time(int x, int y, const std::string& clock_time, const std::string& color_name = "yellow", int size = 6);
     void draw_clock_time(const std::string& clock_time, const std::string& color_name = "yellow", int size = 6);
-    void draw_buttonhint (int corner, const std::string& color_name, const Icons::Icon& icon);
+    void set_buttonhint(int corner, const Icons::Icon& icon, const std::string& color = "");
+    void set_buttonhint(int corner, std::nullptr_t);
+    void draw_buttonhints(bool show = true);
 };

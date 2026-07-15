@@ -248,121 +248,7 @@ void myScreen::show_boot_message(std::string_view message, const std::string& co
     sleep_ms(500);
 }
 
-void myScreen::draw_buttonhint(int corner,
-                               const std::string& color_name,
-                               const Icons::Icon& icon) {
-    const int radius = 24;
-
-    int origin_x = 0;
-    int origin_y = 0;
-
-    switch (corner) {
-        case 0: // top left
-            origin_x = 0;
-            origin_y = 0;
-            break;
-
-        case 1: // bottom left
-            origin_x = 0;
-            origin_y = HEIGHT - radius;
-            break;
-
-        case 2: // top right
-            origin_x = WIDTH - radius;
-            origin_y = 0;
-            break;
-
-        case 3: // bottom right
-            origin_x = WIDTH - radius;
-            origin_y = HEIGHT - radius;
-            break;
-
-        default:
-            return;
-    }
-
-    // Draw the corner
-    this->set_pen(color_name);
-
-    for (int y = 0; y < radius; y++) {
-        for (int x = 0; x < radius; x++) {
-            int dx = x;
-            int dy = y;
-
-            if (corner == 1) {
-                // bottom left: mirror Y
-                dy = radius - 1 - y;
-            } else if (corner == 2) {
-                // top right: mirror X
-                dx = radius - 1 - x;
-            } else if (corner == 3) {
-                // bottom right: mirror X and Y
-                dx = radius - 1 - x;
-                dy = radius - 1 - y;
-            }
-
-            if ((dx * dx + dy * dy) <= (radius * radius)) {
-                this->rectangle(origin_x + x, origin_y + y, 1, 1);
-            }
-        }
-    }
-
-    // Icon inside the corner, hollow using background color
-    const int icon_scale = 2;
-    const int icon_width = icon.width * icon_scale;
-    const int icon_height = icon.height * icon_scale;
-    const int icon_margin = 2;
-
-    int icon_x = origin_x + icon_margin;
-    int icon_y = origin_y + icon_margin;
-
-    switch (corner) {
-        case 0: // top left
-            icon_x = origin_x + icon_margin;
-            icon_y = origin_y + icon_margin;
-            break;
-
-        case 1: // bottom left
-            icon_x = origin_x + icon_margin;
-            icon_y = origin_y + radius - icon_height - icon_margin;
-            break;
-
-        case 2: // top right
-            icon_x = origin_x + radius - icon_width - icon_margin;
-            icon_y = origin_y + icon_margin;
-            break;
-
-        case 3: // bottom right
-            icon_x = origin_x + radius - icon_width - icon_margin;
-            icon_y = origin_y + radius - icon_height - icon_margin;
-            break;
-    }
-
-    this->set_pen(this->background_color);
-
-    for (int row = 0; row < icon.height; row++) {
-        uint8_t bits = icon.data[row];
-
-        for (int col = 0; col < icon.width; col++) {
-            bool pixel_on = bits & (1 << (7 - col));
-
-            if (pixel_on) {
-                this->rectangle(
-                    icon_x + col * icon_scale,
-                    icon_y + row * icon_scale,
-                    icon_scale,
-                    icon_scale
-                );
-            }
-        }
-    }
-}
-
-void myScreen::draw_clock_time(int x_start,
-                               int y_start,
-                               const std::string& clock_time,
-                               const std::string& color_name,
-                               int size) {
+void myScreen::draw_clock_time(int x_start, int y_start, const std::string& clock_time, const std::string& color_name, int size) {
 
     // Expected format: "12:34"
     // Digits: 0-9
@@ -624,9 +510,7 @@ void myScreen::draw_clock_time(int x_start,
     draw_digit(x, y_start, clock_time[4]);
 }
 
-void myScreen::draw_clock_time(const std::string& clock_time,
-                               const std::string& color_name,
-                               int size) {
+void myScreen::draw_clock_time(const std::string& clock_time, const std::string& color_name, int size) {
     const int thickness = size;
     const int horizontal_length = size * 5;
     const int vertical_length = (horizontal_length * 7) / 4;
@@ -647,4 +531,149 @@ void myScreen::draw_clock_time(const std::string& clock_time,
     int y = 30;
 
     this->draw_clock_time(x, y, clock_time, color_name, size);
+}
+
+// corners
+// 0 = top left
+// 1 = top right
+// 2 = bottom left
+// 3 = bottom right
+void myScreen::set_buttonhint(int corner, const Icons::Icon& icon, const std::string& color) {
+    if (corner < 0 || corner > 3) return;
+
+    buttonhint[corner].visible = true;
+    buttonhint[corner].icon = icon;
+    buttonhint[corner].color = color;
+}
+
+// when we want to delete it, no icon, it's null_ptr
+void myScreen::set_buttonhint(int corner, std::nullptr_t){
+        if (corner < 0 || corner > 3) {
+        return;
+    }
+
+    buttonhint[corner].visible = false;
+    buttonhint[corner].icon = {nullptr, 0, 0};
+    buttonhint[corner].color = "";
+}
+
+void myScreen::draw_buttonhints(bool show) {
+    const int radius = 24;
+
+    for (int corner = 0; corner < 4; corner++) {
+        int origin_x = 0;
+        int origin_y = 0;
+
+        switch (corner) {
+            case 0: // top left
+                origin_x = 0;
+                origin_y = 0;
+                break;
+
+            case 1: // bottom left
+                origin_x = 0;
+                origin_y = HEIGHT - radius;
+                break;
+
+            case 2: // top right
+                origin_x = WIDTH - radius;
+                origin_y = 0;
+                break;
+
+            case 3: // bottom right
+                origin_x = WIDTH - radius;
+                origin_y = HEIGHT - radius;
+                break;
+
+            default:
+                return;
+        }
+
+        // Si show és false o aquest buttonhint està buit,
+        // esborrem tota l'àrea de la raconera.
+        if (!show || !buttonhint[corner].visible) {
+            this->set_pen(background_color);
+            this->rectangle(origin_x, origin_y, radius, radius);
+            continue;
+        }
+
+        const Icons::Icon& icon = buttonhint[corner].icon;
+        const std::string& color_name = buttonhint[corner].color;
+
+        // Draw the corner
+        this->set_pen(color_name);
+
+        for (int y = 0; y < radius; y++) {
+            for (int x = 0; x < radius; x++) {
+                int dx = x;
+                int dy = y;
+
+                if (corner == 1) {
+                    // bottom left: mirror Y
+                    dy = radius - 1 - y;
+                } else if (corner == 2) {
+                    // top right: mirror X
+                    dx = radius - 1 - x;
+                } else if (corner == 3) {
+                    // bottom right: mirror X and Y
+                    dx = radius - 1 - x;
+                    dy = radius - 1 - y;
+                }
+
+                if ((dx * dx + dy * dy) <= (radius * radius)) {
+                    this->rectangle(origin_x + x, origin_y + y, 1, 1);
+                }
+            }
+        }
+
+        // Icon inside the corner, hollow using background color
+        const int icon_scale = 2;
+        const int icon_width = icon.width * icon_scale;
+        const int icon_height = icon.height * icon_scale;
+        const int icon_margin = 2;
+
+        int icon_x = origin_x + icon_margin;
+        int icon_y = origin_y + icon_margin;
+
+        switch (corner) {
+            case 0: // top left
+                icon_x = origin_x + icon_margin;
+                icon_y = origin_y + icon_margin;
+                break;
+
+            case 1: // bottom left
+                icon_x = origin_x + icon_margin;
+                icon_y = origin_y + radius - icon_height - icon_margin;
+                break;
+
+            case 2: // top right
+                icon_x = origin_x + radius - icon_width - icon_margin;
+                icon_y = origin_y + icon_margin;
+                break;
+
+            case 3: // bottom right
+                icon_x = origin_x + radius - icon_width - icon_margin;
+                icon_y = origin_y + radius - icon_height - icon_margin;
+                break;
+        }
+
+        this->set_pen(this->background_color);
+
+        for (int row = 0; row < icon.height; row++) {
+            uint8_t bits = icon.data[row];
+
+            for (int col = 0; col < icon.width; col++) {
+                bool pixel_on = bits & (1 << (7 - col));
+
+                if (pixel_on) {
+                    this->rectangle(
+                        icon_x + col * icon_scale,
+                        icon_y + row * icon_scale,
+                        icon_scale,
+                        icon_scale
+                    );
+                }
+            }
+        }
+    }
 }

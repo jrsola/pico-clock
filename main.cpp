@@ -201,10 +201,8 @@ int main() {
     screen.clear("black",20);
 
     //draw initial buttonhints aka corners
-    screen.draw_buttonhint(0, "yellow", Icons::ENTER);
-    screen.draw_buttonhint(1, "red", Icons::BACK);
-    screen.draw_buttonhint(2, "light green", Icons::RIGHT);
-    screen.draw_buttonhint(3, "blue", Icons::HEART);
+    screen.set_buttonhint(3, Icons::HEART, "yellow");
+    screen.draw_buttonhints();
 
     // main loop
     while(true) {
@@ -213,8 +211,10 @@ int main() {
         if (buttonmgr.is_bootsel_long()) reset_usb_boot(0, 0);
         if (buttonmgr.is_a())  expose_drive();
         if (buttonmgr.is_bootsel_single()) reboot();
+        if (buttonmgr.is_y()) screen.set_buttonhint(3,nullptr);
 
         screen.draw_clock_time(get_time(tz_offset), "white", 7);
+        screen.draw_buttonhints();
         led.blink_update();
         screen.update();
     }
