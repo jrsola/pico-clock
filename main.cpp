@@ -183,7 +183,7 @@ int main() {
     sntp_start();
     screen.show_boot_message("SNTP CLIENT STARTED", "green");
 
-    screen.show_boot_message("SYNCHRONIZING TIME...");
+    screen.show_boot_message("SYNCHRONIZING TIME");
     while (!network_time_is_synced()) {
         sleep_ms(50); // wait for sntp to sync clock
     }
@@ -201,7 +201,10 @@ int main() {
     screen.clear("black",20);
 
     //draw initial buttonhints aka corners
-    screen.set_buttonhint(3, Icons::HEART, "yellow");
+    screen.set_buttonhint('a', Icons::HEART, "yellow");
+    screen.set_buttonhint('b', Icons::CLOCK, "yellow");
+    screen.set_buttonhint('x', Icons::DISK, "yellow");
+    screen.set_buttonhint('y', Icons::INFO, "yellow");
     screen.draw_buttonhints();
 
     // main loop
@@ -211,7 +214,7 @@ int main() {
         if (buttonmgr.is_bootsel_long()) reset_usb_boot(0, 0);
         if (buttonmgr.is_a())  expose_drive();
         if (buttonmgr.is_bootsel_single()) reboot();
-        if (buttonmgr.is_y()) screen.set_buttonhint(3,nullptr);
+        if (buttonmgr.is_y()) screen.clear_buttonhint('a');
 
         screen.draw_clock_time(get_time(tz_offset), "white", 7);
         screen.draw_buttonhints();

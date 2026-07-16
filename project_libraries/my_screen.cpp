@@ -533,13 +533,37 @@ void myScreen::draw_clock_time(const std::string& clock_time, const std::string&
     this->draw_clock_time(x, y, clock_time, color_name, size);
 }
 
-// corners
-// 0 = top left
-// 1 = top right
-// 2 = bottom left
-// 3 = bottom right
-void myScreen::set_buttonhint(int corner, const Icons::Icon& icon, const std::string& color) {
-    if (corner < 0 || corner > 3) return;
+
+// convert button label into a corner number for buttonhints
+int button_to_corner(char button) {
+    switch (button) {
+        case 'a':
+        case 'A':
+            return 0; // top left
+
+        case 'b':
+        case 'B':
+            return 1; // bottom left
+
+        case 'x':
+        case 'X':
+            return 2; // top right
+
+        case 'y':
+        case 'Y':
+            return 3; // bottom right
+
+        default:
+            return -1; // invalid button
+    }
+}
+
+
+void myScreen::set_buttonhint(char button, const Icons::Icon& icon, const std::string& color) {
+    
+    int corner = button_to_corner(button);
+    
+    if (corner == -1) return; 
 
     buttonhint[corner].visible = true;
     buttonhint[corner].icon = icon;
@@ -547,10 +571,11 @@ void myScreen::set_buttonhint(int corner, const Icons::Icon& icon, const std::st
 }
 
 // when we want to delete it, no icon, it's null_ptr
-void myScreen::set_buttonhint(int corner, std::nullptr_t){
-        if (corner < 0 || corner > 3) {
-        return;
-    }
+void myScreen::clear_buttonhint(char button){
+
+    int corner = button_to_corner(button);
+    
+    if (corner == -1) return;
 
     buttonhint[corner].visible = false;
     buttonhint[corner].icon = {nullptr, 0, 0};
