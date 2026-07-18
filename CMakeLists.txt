@@ -21,22 +21,7 @@ set(PICO_LWIP_THREADS 1)  # Enable thread-safe background network
 # Enable TinyUSB
 set(PICO_TINYUSB_ENABLE 1)
 
-# Load Default Wi-Fi values (SSID/PASSWORD) from wifi_credentials.txt
-set(WIFI_CREDENTIALS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/wifi_credentials.txt")
-if(EXISTS ${WIFI_CREDENTIALS_FILE})
-    file(READ ${WIFI_CREDENTIALS_FILE} FILE_CONTENT)
-    string(REGEX REPLACE "\n" ";" CREDENTIALS_LIST "${FILE_CONTENT}")
-    list(GET CREDENTIALS_LIST 0 WIFI_SSID)
-    list(GET CREDENTIALS_LIST 1 WIFI_PASSWORD)
-    message(STATUS "WIFI_SSID: ${WIFI_SSID}")
-    message(STATUS "WIFI_PASSWORD: ${WIFI_PASSWORD}")
-    add_definitions(-DWIFI_SSID="${WIFI_SSID}")
-    add_definitions(-DWIFI_PASSWORD="${WIFI_PASSWORD}")
-else()
-    message(STATUS "WARNING: WIFI CREDENTIALS NOT DEFINED")
-endif()
-
-# Initialize the Pico SDK 
+# Initialize Pico SDK 
 # Note: this must happen before project()
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 

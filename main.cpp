@@ -110,12 +110,28 @@ void expose_drive(){
     reboot();
 }
 
-// this needs to be moved to a function button screeen 
-// std::string board_id = info_board();
-// screen.writeln("BOARD ID: " + board_id,"green");
-// std::string voltage_id = info_voltage();
-// //screen.writeln("VOLTAGE: " + voltage_id + "V","pink");
+void show_info(){
+    screen.clear();
+    screen.set_buttonhint('y', Icons::BACK, "orange");
+    screen.draw_buttonhints();
+    // this needs to be moved to a function button screeen 
+    std::string board_id = info_board();
+    screen.writeln("BOARD ID: " + board_id,"green");
+    std::string voltage_id = info_voltage();
+    screen.writeln("VOLTAGE: " + voltage_id + "V","pink");
 
+
+    screen.update();
+     while(true) {
+        buttonmgr.update();
+        if (buttonmgr.is_y()) break;
+     }
+    // restore main screen buttons here
+    screen.set_buttonhint('y', Icons::INFO, "yellow"); // this should be removed by previous statement
+    screen.draw_buttonhints();
+    screen.update();
+    return;
+}
 
 
 int main() {
@@ -212,9 +228,9 @@ int main() {
         buttonmgr.update();
         //if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
         if (buttonmgr.is_bootsel_long()) reset_usb_boot(0, 0);
-        if (buttonmgr.is_a())  expose_drive();
+        if (buttonmgr.is_a()) expose_drive();
         if (buttonmgr.is_bootsel_single()) reboot();
-        if (buttonmgr.is_y()) screen.clear_buttonhint('a');
+        if (buttonmgr.is_y()) show_info();
 
         screen.draw_clock_time(get_time(tz_offset), "white", 7);
         screen.draw_buttonhints();

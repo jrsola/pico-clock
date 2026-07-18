@@ -11,6 +11,14 @@ enum class BootselEvent {
     LongPress
 };
 
+enum class ButtonEvent {
+    None,
+    A,
+    B,
+    X,
+    Y
+};
+
 class ButtonManager {
 private:
     Button button_a;
@@ -18,18 +26,24 @@ private:
     Button button_x;
     Button button_y;
 
+    bool last_a = false;
+    bool last_b = false;
+    bool last_x = false;
+    bool last_y = false;
+
     enum State { IDLE, PRESSED, RELEASED };
     State bootsel_state = IDLE;
     absolute_time_t last_bootsel_press = at_the_end_of_time;
     absolute_time_t bootsel_press_start;
     int bootsel_click_count = 0;
     BootselEvent bootsel_result = BootselEvent::None;
-
-private:
     BootselEvent get_bootsel_event() const;
+    ButtonEvent button_result = ButtonEvent::None;
 
 public:
     ButtonManager();
+
+    ButtonEvent get_button_event() const;
 
     void update();
 
