@@ -51,9 +51,11 @@ public:
     bool is_b() ;
     bool is_x() ;
     bool is_y() ;
+    bool any_pressed();
     bool is_bootsel_single();
     bool is_bootsel_double();
     bool is_bootsel_long();
+
 
 
 };

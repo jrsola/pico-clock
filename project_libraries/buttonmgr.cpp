@@ -69,6 +69,14 @@ void ButtonManager::update() {
     last_y = current_y;
 }
 
+bool ButtonManager::any_pressed() {
+    return button_a.raw() ||
+           button_b.raw() ||
+           button_x.raw() ||
+           button_y.raw() ||
+           get_bootsel_button();
+}
+
 BootselEvent ButtonManager::get_bootsel_event() const {
     return bootsel_result;
 }

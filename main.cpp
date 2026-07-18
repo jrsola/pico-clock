@@ -111,6 +111,7 @@ void expose_drive(){
 }
 
 void show_info(){
+    screen.clear_buttonhint_all();
     screen.clear();
     screen.set_buttonhint('y', Icons::BACK, "orange");
     screen.draw_buttonhints();
@@ -120,17 +121,232 @@ void show_info(){
     std::string voltage_id = info_voltage();
     screen.writeln("VOLTAGE: " + voltage_id + "V","pink");
 
-
     screen.update();
      while(true) {
         buttonmgr.update();
         if (buttonmgr.is_y()) break;
      }
     // restore main screen buttons here
-    screen.set_buttonhint('y', Icons::INFO, "yellow"); // this should be removed by previous statement
-    screen.draw_buttonhints();
-    screen.update();
+    screen.clear();
+    screen.default_buttonhints();
     return;
+}
+
+// boot up process
+void bootup(){
+    //booting process should be moved here
+}
+
+void draw_clock(int tz_offset) {
+    static absolute_time_t last_activity = get_absolute_time();
+    static absolute_time_t last_move = get_absolute_time();
+
+    static bool screensaver_mode = false;
+
+    static int clock_x = 0;
+    static int clock_y = 30;
+
+    static int dx = 2;
+    static int dy = 1;
+
+    static int last_drawn_second = -1;
+
+    const int CLOCK_SIZE = 7;
+    const int BUTTONHINT_TIMEOUT_SECONDS = 10;
+    const int CLOCK_MOVE_INTERVAL_MS = 5000;
+
+    const int screen_width = screen.get_width();
+    const int screen_height = screen.get_height();
+
+    const int size = CLOCK_SIZE;
+    const int thickness = size;
+    const int horizontal_length = size * 5;
+    const int vertical_length = (horizontal_length * 7) / 4;
+
+    const int digit_width =
+        thickness * 2 +
+        horizontal_length;
+
+    const int digit_height =
+        thickness * 3 +
+        vertical_length * 2;
+
+    const int digit_gap = size * 2;
+    const int colon_width = size;
+    const int colon_gap = size * 2;
+
+    const int clock_width =
+        digit_width * 4 +
+        digit_gap * 2 +
+        colon_gap * 2 +
+        colon_width;
+
+    const int clock_height = digit_height;
+
+    absolute_time_t now = get_absolute_time();
+
+    const int current_second =
+        static_cast<int>(::time(nullptr) % 60);
+
+    const bool activity = buttonmgr.any_pressed();
+
+    /*
+     * Activitat detectada.
+     */
+    if (activity) {
+        last_activity = now;
+    }
+
+    /*
+     * Sortida del mode screensaver.
+     *
+     * Netegem la pantalla, recuperem els button hints
+     * i redibuixem immediatament tot el rellotge.
+     */
+    if (activity && screensaver_mode) {
+        screensaver_mode = false;
+
+        screen.clear();
+        screen.default_buttonhints();
+
+        screen.draw_clock_time(
+            get_time(tz_offset),
+            "white",
+            CLOCK_SIZE,
+            true
+        );
+
+        last_drawn_second = current_second;
+
+        return;
+    }
+
+    const int64_t inactive_ms =
+        absolute_time_diff_us(last_activity, now) / 1000;
+
+    /*
+     * Entrada al mode screensaver.
+     */
+    if (!screensaver_mode &&
+        inactive_ms >= BUTTONHINT_TIMEOUT_SECONDS * 1000) {
+
+        screensaver_mode = true;
+
+        screen.clear();
+
+        clock_x = (screen_width - clock_width) / 2;
+        clock_y = 30;
+
+        last_move = now;
+
+        screen.draw_clock_time(
+            clock_x,
+            clock_y,
+            get_time(tz_offset),
+            "white",
+            CLOCK_SIZE,
+            true
+        );
+
+        last_drawn_second = current_second;
+
+        return;
+    }
+
+    /*
+     * Mode screensaver.
+     */
+    if (screensaver_mode) {
+        const int64_t move_elapsed_ms =
+            absolute_time_diff_us(last_move, now) / 1000;
+
+        bool clock_moved = false;
+
+        if (move_elapsed_ms >= CLOCK_MOVE_INTERVAL_MS) {
+            last_move = now;
+
+            clock_x += dx;
+            clock_y += dy;
+
+            if (clock_x <= 0) {
+                clock_x = 0;
+                dx = -dx;
+            }
+
+            if (clock_x + clock_width >= screen_width) {
+                clock_x = screen_width - clock_width;
+                dx = -dx;
+            }
+
+            if (clock_y <= 0) {
+                clock_y = 0;
+                dy = -dy;
+            }
+
+            if (clock_y + clock_height >= screen_height) {
+                clock_y = screen_height - clock_height;
+                dy = -dy;
+            }
+
+            clock_moved = true;
+        }
+
+        /*
+         * Si el rellotge s'ha mogut:
+         * esborrem i redibuixem tots els dígits.
+         */
+        if (clock_moved) {
+            screen.clear();
+
+            screen.draw_clock_time(
+                clock_x,
+                clock_y,
+                get_time(tz_offset),
+                "white",
+                CLOCK_SIZE,
+                true
+            );
+
+            last_drawn_second = current_second;
+
+            return;
+        }
+
+        /*
+         * Si només ha canviat el segon,
+         * draw_clock_time actualitzarà els dos punts.
+         */
+        if (current_second != last_drawn_second) {
+            screen.draw_clock_time(
+                clock_x,
+                clock_y,
+                get_time(tz_offset),
+                "white",
+                CLOCK_SIZE,
+                false
+            );
+
+            last_drawn_second = current_second;
+        }
+
+        return;
+    }
+
+    /*
+     * Mode normal.
+     *
+     * Només actualitzem una vegada per segon.
+     */
+    if (current_second != last_drawn_second) {
+        screen.draw_clock_time(
+            get_time(tz_offset),
+            "white",
+            CLOCK_SIZE,
+            false
+        );
+
+        last_drawn_second = current_second;
+    }
 }
 
 
@@ -217,11 +433,7 @@ int main() {
     screen.clear("black",20);
 
     //draw initial buttonhints aka corners
-    screen.set_buttonhint('a', Icons::HEART, "yellow");
-    screen.set_buttonhint('b', Icons::CLOCK, "yellow");
-    screen.set_buttonhint('x', Icons::DISK, "yellow");
-    screen.set_buttonhint('y', Icons::INFO, "yellow");
-    screen.draw_buttonhints();
+    screen.default_buttonhints();
 
     // main loop
     while(true) {
@@ -232,8 +444,7 @@ int main() {
         if (buttonmgr.is_bootsel_single()) reboot();
         if (buttonmgr.is_y()) show_info();
 
-        screen.draw_clock_time(get_time(tz_offset), "white", 7);
-        screen.draw_buttonhints();
+        draw_clock(tz_offset);
         led.blink_update();
         screen.update();
     }

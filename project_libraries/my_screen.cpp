@@ -248,7 +248,7 @@ void myScreen::show_boot_message(std::string_view message, const std::string& co
     sleep_ms(500);
 }
 
-void myScreen::draw_clock_time(int x_start, int y_start, const std::string& clock_time, const std::string& color_name, int size) {
+void myScreen::draw_clock_time(int x_start, int y_start, const std::string& clock_time, const std::string& color_name, int size, bool force_redraw) {
 
     // Expected format: "12:34"
     // Digits: 0-9
@@ -308,15 +308,15 @@ void myScreen::draw_clock_time(int x_start, int y_start, const std::string& cloc
     };
 
     // If time has not changed, only update the colon
-    if (clock_time == this->last_clock_time) {
-        int colon_x = x_start
-                    + digit_width + digit_gap
-                    + digit_width + colon_gap;
+    if (!force_redraw && clock_time == this->last_clock_time) {
+    int colon_x = x_start
+                + digit_width + digit_gap
+                + digit_width + colon_gap;
 
-        draw_colon(colon_x, y_start);
+    draw_colon(colon_x, y_start);
 
-        return;
-    }
+    return;
+}
 
     // Time has changed, so redraw only the clock area
     this->last_clock_time = clock_time;
@@ -510,12 +510,18 @@ void myScreen::draw_clock_time(int x_start, int y_start, const std::string& cloc
     draw_digit(x, y_start, clock_time[4]);
 }
 
-void myScreen::draw_clock_time(const std::string& clock_time, const std::string& color_name, int size) {
+void myScreen::draw_clock_time(
+    const std::string& clock_time,
+    const std::string& color_name,
+    int size,
+    bool force_redraw
+) {
     const int thickness = size;
     const int horizontal_length = size * 5;
-    const int vertical_length = (horizontal_length * 7) / 4;
 
-    const int digit_width = thickness * 2 + horizontal_length;
+    const int digit_width =
+        thickness * 2 +
+        horizontal_length;
 
     const int digit_gap = size * 2;
     const int colon_width = size;
@@ -527,12 +533,19 @@ void myScreen::draw_clock_time(const std::string& clock_time, const std::string&
         colon_gap * 2 +
         colon_width;
 
-    int x = (WIDTH - total_width) / 2;
-    int y = 30;
+    const int x = (get_width() - total_width) / 2;
+    const int y = 30;
 
-    this->draw_clock_time(x, y, clock_time, color_name, size);
+    // És imprescindible transmetre force_redraw.
+    draw_clock_time(
+        x,
+        y,
+        clock_time,
+        color_name,
+        size,
+        force_redraw
+    );
 }
-
 
 // convert button label into a corner number for buttonhints
 int button_to_corner(char button) {
@@ -701,4 +714,20 @@ void myScreen::draw_buttonhints(bool show) {
             }
         }
     }
+}
+
+void myScreen::default_buttonhints(){
+    set_buttonhint('a', Icons::HEART, "yellow");
+    set_buttonhint('b', Icons::CLOCK, "yellow");
+    set_buttonhint('x', Icons::DISK, "yellow");
+    set_buttonhint('y', Icons::INFO, "yellow");
+    draw_buttonhints();
+}
+
+void myScreen::clear_buttonhint_all(){
+    clear_buttonhint('a');
+    clear_buttonhint('b');
+    clear_buttonhint('x');
+    clear_buttonhint('y');
+    draw_buttonhints();
 }
