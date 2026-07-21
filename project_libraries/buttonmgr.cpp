@@ -113,4 +113,16 @@ bool ButtonManager::is_bootsel_long(){
     return (bootsel_result==BootselEvent::LongPress);
 }
 
+void ButtonManager::wait_for_any_button() {
+    // wait until no button is pressed (if any)
+    while (any_pressed()) {
+        update();
+        sleep_ms(10);
+    }
 
+    // then wait for any button to be pressed to continue
+    while (!any_pressed()) {
+        update();
+        sleep_ms(10);
+    }
+}

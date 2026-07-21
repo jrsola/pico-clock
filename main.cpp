@@ -152,7 +152,7 @@ void draw_clock(int tz_offset) {
     static int last_drawn_second = -1;
 
     const int CLOCK_SIZE = 7;
-    const int BUTTONHINT_TIMEOUT_SECONDS = 10;
+    const int BUTTONHINT_TIMEOUT_SECONDS = 30;
     const int CLOCK_MOVE_INTERVAL_MS = 5000;
 
     const int screen_width = screen.get_width();
@@ -350,17 +350,18 @@ void draw_clock(int tz_offset) {
 }
 
 
+
 int main() {
 
     // initialize Pico
     stdio_init_all();
 
-    // initialize and bootup screen 
+    // 1. show logo and app name
     screen.clear("dark blue",5);
     screen.draw_logo("PICO CLOCK");
     screen.show_boot_message("SCREEN INITIALIZED", "green");
 
-    // tinyFS file system 
+    // 2 & 3. tinyFS file system 
     screen.show_boot_message("INITIALIZING FILESYSTEM");
     ram_disk_load_from_flash();
     FRESULT res = mountfs();
@@ -377,21 +378,19 @@ int main() {
         }
     }
     // filesystem exists, now if CONFIG file is missing, create it
-    // and expose drive to PC to configure WIFI
+    // and show message to configure it from computer
     if (file_exists("CONFIG.TXT") != FR_OK){
         screen.show_boot_message("CREATING CONFIG FILE", "orange");
-        write_key("CONFIG.TXT", "WIFI_NAME", "WRITE WIFI NAME HERE");
-        screen.show_boot_message();
-        write_key("CONFIG.TXT", "WIFI_PASSWORD", "WRITE WIFI PASSWORD HERE");
-        screen.show_boot_message();
-        screen.show_boot_message("EDIT CONFIG FILE FROM YOUR PC");
         sleep_ms(3000);
-        expose_drive();
-        reboot();
+        write_key("CONFIG.TXT", "WIFI_NAME", "WRITE WIFI NAME HERE");
+        write_key("CONFIG.TXT", "WIFI_PASSWORD", "WRITE WIFI PASSWORD HERE");
+        screen.show_boot_message("WIFI CONFIG NEEDED. ANY BUTTON TO CONTIUNE.");
+        buttonmgr.any_pressed();
     }
+    // 4. filesystem initialized
     screen.show_boot_message("FILESYSTEM INITIALIZED");
 
-    // wifi and network initialization
+    // 5 & 6 wifi and network initialization
     if(wifi_init()) {
         screen.show_boot_message("WIFI CHIPSET OK", "green");
         screen.show_boot_message("WIFI ARCH OK", "green");
@@ -400,7 +399,7 @@ int main() {
         reboot();
     }
 
-    // connect to WiFi network
+    // 7 & 8 connect to WiFi network
     screen.show_boot_message("CONNECTING TO WIFI NETWORK");
     if (wifi_connect(read_key("CONFIG.TXT", "WIFI_NAME"), read_key("CONFIG.TXT", "WIFI_PASSWORD"))){
         screen.show_boot_message("CONNECTED TO WIFI NETWORK", "green");
@@ -408,9 +407,10 @@ int main() {
         screen.show_boot_message("ERROR CONNECTING TO WIFI", "red");
         sleep_ms(3000);
         screen.show_boot_message("CHECK NETWORK CONFIG", "orange");
-        sleep_ms(3000);
+        buttonmgr.any_pressed();
     }
 
+    // 9 & 10 SNTP client 
     screen.show_boot_message("STARTING SNTP CLIENT");
     sntp_start();
     screen.show_boot_message("SNTP CLIENT STARTED", "green");

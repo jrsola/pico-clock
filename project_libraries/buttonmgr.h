@@ -55,7 +55,6 @@ public:
     bool is_bootsel_single();
     bool is_bootsel_double();
     bool is_bootsel_long();
-
-
+    void wait_for_any_button();
 
 };
