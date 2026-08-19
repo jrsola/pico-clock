@@ -184,43 +184,40 @@ void myScreen::draw_logo(const std::string& title, const int steps, const int de
 void myScreen::progress_bar(int segments) {
     const int bar_width = 120;
     const int bar_height = 10;
-    const int total_segments = 12;
-    const int segment_width = 6;
 
     const int x = (WIDTH - bar_width) / 2;
     const int y = HEIGHT - bar_height - 5;
 
-    // If an explicit value is passed, use it.
-    // If no value is passed, add one segment.
-    if (segments >= 0) {
+    if (segments <= 0)
+        return;
+
+    const int segment_width = bar_width / segments;
+
+    // Avança un segment
+    progress_segments++;
+
+    // No sobrepassar el total
+    if (progress_segments > segments)
         progress_segments = segments;
-    } else {
-        progress_segments++;
-    }
 
-    // Clamp/wrap
-    if (progress_segments < 0) {
-        progress_segments = 0;
-    }
-
-    if (progress_segments > total_segments) {
-        progress_segments = 1;
-    }
-
-    // Draw empty bar
+    // Esborra la barra
     this->set_pen("black");
     this->rectangle(x, y, bar_width, bar_height);
 
-    // Draw progress segments
+    // Dibuixa el progrés
     this->set_pen("light green");
 
     for (int i = 0; i < progress_segments; i++) {
-        int segment_x = x + i * segment_width;
+        int width = segment_width;
+
+        // L'últim segment absorbeix els píxels sobrants
+        if (i == segments - 1)
+            width = bar_width - i * segment_width;
 
         this->rectangle(
-            segment_x,
+            x + i * segment_width,
             y,
-            segment_width,
+            width,
             bar_height
         );
     }
@@ -591,8 +588,8 @@ void myScreen::clear_buttonhint(char button){
     if (corner == -1) return;
 
     buttonhint[corner].visible = false;
-    buttonhint[corner].icon = {nullptr, 0, 0};
-    buttonhint[corner].color = "";
+    buttonhint[corner].icon = Icons::NONE;
+    buttonhint[corner].color.clear();
 }
 
 void myScreen::draw_buttonhints(bool show) {

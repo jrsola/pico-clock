@@ -13,7 +13,7 @@ using namespace pimoroni;
 
 struct ButtonHint {
     bool visible = false;
-    Icons::Icon icon = {nullptr, 0, 0};
+    Icons::Icon icon = Icons::NONE;
     std::string color = "";
 };
 
@@ -49,7 +49,7 @@ public:
     void writeln(const std::string_view &t = "", const std::string& color_name = "");
     void writexy(int x, int y, const std::string_view &t = "", const std::string& color_name = "", int scale = 2);
     void draw_logo(const std::string& title = "", const int steps = 15, const int delay = 100);
-    void progress_bar(int segments = -1);
+    void progress_bar(int segments = 13);
     void show_boot_message(std::string_view boot_msg = "", const std::string& color_name = "white");
     void draw_clock_time(int x, int y, const std::string& clock_time, const std::string& color_name = "yellow", int size = 6, bool force_redraw = false);
     void draw_clock_time(const std::string& clock_time, const std::string& color_name = "yellow", int size = 6, bool force_redraw = false);

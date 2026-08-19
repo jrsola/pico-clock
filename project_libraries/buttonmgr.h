@@ -1,3 +1,5 @@
+#pragma once
+
 #include "pico/time.h"
 #include "button.hpp"
 #include "pico_display_2.hpp"
@@ -20,6 +22,26 @@ enum class ButtonEvent {
 };
 
 class ButtonManager {
+
+public:
+    ButtonManager();
+
+    ButtonEvent get_button_event() const;
+
+    // return a pointer to a null terminated string 
+    const char* update();
+
+    // this will assign actions to buttons
+    void set_action(char button, const char* action);
+    void clear_action(char button);
+    void clear_actions();
+
+    bool is_a();
+    bool is_b();
+    bool is_x();
+    bool is_y();
+    void wait_for_any_button();
+
 private:
     Button button_a;
     Button button_b;
@@ -40,21 +62,6 @@ private:
     BootselEvent get_bootsel_event() const;
     ButtonEvent button_result = ButtonEvent::None;
 
-public:
-    ButtonManager();
 
-    ButtonEvent get_button_event() const;
-
-    void update();
-
-    bool is_a() ;
-    bool is_b() ;
-    bool is_x() ;
-    bool is_y() ;
-    bool any_pressed();
-    bool is_bootsel_single();
-    bool is_bootsel_double();
-    bool is_bootsel_long();
-    void wait_for_any_button();
 
 };

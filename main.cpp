@@ -385,7 +385,7 @@ int main() {
         write_key("CONFIG.TXT", "WIFI_NAME", "WRITE WIFI NAME HERE");
         write_key("CONFIG.TXT", "WIFI_PASSWORD", "WRITE WIFI PASSWORD HERE");
         screen.show_boot_message("WIFI CONFIG NEEDED. ANY BUTTON TO CONTIUNE.");
-        buttonmgr.any_pressed();
+        buttonmgr.wait_for_any_button();
     }
     // 4. filesystem initialized
     screen.show_boot_message("FILESYSTEM INITIALIZED");
@@ -407,7 +407,7 @@ int main() {
         screen.show_boot_message("ERROR CONNECTING TO WIFI", "red");
         sleep_ms(3000);
         screen.show_boot_message("CHECK NETWORK CONFIG", "orange");
-        buttonmgr.any_pressed();
+        buttonmgr.wait_for_any_button();
     }
 
     // 9 & 10 SNTP client 
@@ -415,18 +415,32 @@ int main() {
     sntp_start();
     screen.show_boot_message("SNTP CLIENT STARTED", "green");
 
-    screen.show_boot_message("SYNCHRONIZING TIME");
-    while (!network_time_is_synced()) {
-        sleep_ms(50); // wait for sntp to sync clock
-    }
-    screen.show_boot_message("TIME IS SYNCHRONIZED", "green");
 
+    // 11-12 sync time
+    screen.show_boot_message("SYNCHRONIZING TIME");
+
+    absolute_time_t start = get_absolute_time();
+
+   // wait 10 seconds for the time to get acquired or show error
+    while (!network_time_is_synced()) {
+        if (absolute_time_diff_us(start, get_absolute_time()) >= 10 * 1000 * 1000) break;
+    }
+
+    if (network_time_is_synced()){
+        screen.show_boot_message("TIME IS SYNCHRONIZED", "green");
+    } else {
+        screen.show_boot_message("TIME SYNC ERROR", "red");
+        buttonmgr.wait_for_any_button();
+    }
+
+    // 13 read timezone
     if (read_key("CONFIG.TXT", "TIMEZONE").empty()){
         write_key("CONFIG.TXT", "TIMEZONE", "0");
-        screen.show_boot_message("CONFIGURE TZ IN CONFIG FILE", "orange");
+        screen.show_boot_message("CONFIGURE TZ IN CONFIG FILE", "red");
+        buttonmgr.wait_for_any_button();
     }
     int tz_offset = std::stoi(read_key("CONFIG.TXT", "TIMEZONE"));
-    screen.show_boot_message("TZ LOADED", "orange");
+    screen.show_boot_message("TZ LOADED", "green");
 
     std::string time_string;
 
