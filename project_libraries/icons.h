@@ -2,6 +2,23 @@
 
 #include <cstdint>
 
+enum class Action {
+    None,
+    Reboot,
+    UsbBoot,
+    Favorites,
+    ShowClock,
+    ExposeDisk,
+    ShowInfo,
+    Back,
+    Up,
+    Down,
+    Left,
+    Right,
+    Enter,
+    Asterisk
+};
+
 namespace Icons
 {
    constexpr uint8_t ICON_WIDTH = 8;
@@ -12,7 +29,7 @@ namespace Icons
       uint8_t height;
       uint8_t width;
       uint8_t data[8];
-      const char* action;
+      Action action;
    };
 
 
@@ -21,7 +38,7 @@ namespace Icons
         0,
         0,
         {0},
-        nullptr
+        Action::None
     };
 
 
@@ -42,7 +59,7 @@ namespace Icons
            0b10011001,
            0b00011000
        },
-       "asterisk"
+       Action::Asterisk
    };
 
    // -----------------------------------------------------------------------------
@@ -62,7 +79,7 @@ namespace Icons
            0b00011000,
            0b00000000
        },
-       "favorites"
+       Action::Favorites
    };
 
    // -----------------------------------------------------------------------------
@@ -82,7 +99,7 @@ namespace Icons
            0b00011110,
            0b00000000
        },
-       "back"
+       Action::Back
    };
 
    // -----------------------------------------------------------------------------
@@ -102,7 +119,7 @@ namespace Icons
            0b00011000,
            0b00000000
        },
-       "up"
+       Action::Up
    };
 
    // -----------------------------------------------------------------------------
@@ -122,7 +139,7 @@ namespace Icons
            0b00111100,
            0b00011000
        },
-       "down"
+       Action::Down
    };
 
    // -----------------------------------------------------------------------------
@@ -142,7 +159,7 @@ namespace Icons
            0b00011000,
            0b00010000
        },
-       "right"
+       Action::Right
    };
 
    // -----------------------------------------------------------------------------
@@ -162,7 +179,7 @@ namespace Icons
            0b00011000,
            0b00001000
        },
-       "left"
+       Action::Left
    };
 
    // -----------------------------------------------------------------------------
@@ -182,7 +199,7 @@ namespace Icons
            0b01100000,
            0b00100000
        },
-       "enter"
+       Action::Enter
    };
 
    // -----------------------------------------------------------------------------
@@ -202,7 +219,7 @@ namespace Icons
            0b01000010,
            0b00111100
        },
-       "show_clock"
+       Action::ShowClock
    };
 
    // -----------------------------------------------------------------------------
@@ -222,7 +239,7 @@ namespace Icons
            0b10100101,
            0b11111111
        },
-       "expose_disk"
+       Action::ExposeDisk
    };
 
    // -----------------------------------------------------------------------------
@@ -242,6 +259,6 @@ namespace Icons
            0b01000010,
            0b00111100
        },
-       "show_info"
+       Action::ShowInfo
    };
 }

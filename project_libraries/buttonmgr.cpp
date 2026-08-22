@@ -1,6 +1,8 @@
 #include "buttonmgr.h"
 #include "bootsel.h"
 
+#include "pico/stdlib.h"
+
 using namespace pimoroni;
 
 ButtonManager::ButtonManager()
@@ -10,45 +12,43 @@ ButtonManager::ButtonManager()
       button_y(PicoDisplay2::Y)
 {}
 
-void ButtonManager::update() {
-
+Action ButtonManager::update() {
     absolute_time_t now = get_absolute_time();
 
-    bootsel_result = BootselEvent::None;
-    button_result = ButtonEvent::None;
+    //--------------------------
+    // BOOTSEL button handling
+    //--------------------------
+    bool bootsel_pressed = get_bootsel_button();
 
-    // **************
-    // bootsel events
-    // **************
-    bool pressed = get_bootsel_button();
-
-    static bool was_pressed = false;
-    static bool first_press = true;
-
-    if (pressed && !was_pressed) {
-        int64_t elapsed_ms = absolute_time_diff_us(last_bootsel_press, now) / 1000;
-
-        if (!first_press && elapsed_ms < 500) {
-            bootsel_result = BootselEvent::DoublePress;
-        } else {
-            // Guardem l’hora actual per detectar doble clic més endavant
-            last_bootsel_press = now;
-        }
-
+    // BOOTSEL button pressed for the first time
+    if (bootsel_pressed && !bootsel_was_pressed) {
         bootsel_press_start = now;
-        first_press = false;
+        bootsel_long_handled = false;
     }
 
-    if (!pressed && was_pressed) {
+    // BOOTSEL button still pressed
+    if (bootsel_pressed && bootsel_was_pressed && !bootsel_long_handled) {
         int64_t press_duration_ms = absolute_time_diff_us(bootsel_press_start, now) / 1000;
+
+        // long press
         if (press_duration_ms >= 1000) {
-            bootsel_result = BootselEvent::LongPress;
-        } else if (bootsel_result != BootselEvent::DoublePress) {
-            bootsel_result = BootselEvent::SinglePress;
+            bootsel_long_handled = true;
+            bootsel_was_pressed = bootsel_pressed;
+            return Action::UsbBoot;
         }
     }
 
-    was_pressed = pressed;
+    // BOOTSEL button released
+    if (!bootsel_pressed && bootsel_was_pressed) {
+        bootsel_was_pressed = false;
+
+        // it was not a long press, regular reboot
+        if (!bootsel_long_handled) {
+            return Action::Reboot;
+        }
+    }
+    
+    bootsel_was_pressed = bootsel_pressed;
 
     // *********************
     // a/b/x/y button events
@@ -58,15 +58,58 @@ void ButtonManager::update() {
     bool current_x = button_x.raw();
     bool current_y = button_y.raw();
 
-    if (current_a && !last_a) button_result = ButtonEvent::A;
-    else if (current_b && !last_b) button_result = ButtonEvent::B;
-    else if (current_x && !last_x) button_result = ButtonEvent::X;
-    else if (current_y && !last_y) button_result = ButtonEvent::Y;
+    Action action = Action::None;
+
+    if (current_a && !last_a) action = button_actions[0];
+    else if (current_b && !last_b) action = button_actions[1];
+    else if (current_x && !last_x) action = button_actions[2];
+    else if (current_y && !last_y) action = button_actions[3];
 
     last_a = current_a;
     last_b = current_b;
     last_x = current_x;
     last_y = current_y;
+
+    return action;
+}
+
+int ButtonManager::button_to_index(char button) const {
+    switch (button) {
+        case 'a':
+        case 'A':
+            return 0;
+
+        case 'b':
+        case 'B':
+            return 1;
+
+        case 'x':
+        case 'X':
+            return 2;
+
+        case 'y':
+        case 'Y':
+            return 3;
+
+        default:
+            return -1;
+    }
+}
+
+void ButtonManager::set_action(char button, Action action) {
+    int index = button_to_index(button);
+    if (index != -1) button_actions[index] = action;
+}
+
+void ButtonManager::clear_action(char button) {
+    int index = button_to_index(button);
+    if (index != -1) button_actions[index] = Action::None;
+}
+
+void ButtonManager::clear_actions() {
+    for (int i = 0; i < 4; ++i) {
+        button_actions[i] = Action::None;
+    }
 }
 
 bool ButtonManager::any_pressed() {
@@ -75,42 +118,6 @@ bool ButtonManager::any_pressed() {
            button_x.raw() ||
            button_y.raw() ||
            get_bootsel_button();
-}
-
-BootselEvent ButtonManager::get_bootsel_event() const {
-    return bootsel_result;
-}
-
-ButtonEvent ButtonManager::get_button_event() const {
-    return button_result;
-}
-
-bool ButtonManager::is_a()  {
-    return button_result == ButtonEvent::A;
-}
-
-bool ButtonManager::is_b()  {
-    return button_result == ButtonEvent::B;
-}
-
-bool ButtonManager::is_x()  {
-    return button_result == ButtonEvent::X;
-}
-
-bool ButtonManager::is_y()  {
-    return button_result == ButtonEvent::Y;
-}
-
-bool ButtonManager::is_bootsel_single(){
-    return (bootsel_result==BootselEvent::SinglePress);
-}
-
-bool ButtonManager::is_bootsel_double(){
-    return (bootsel_result==BootselEvent::DoublePress);
-}
-
-bool ButtonManager::is_bootsel_long(){
-    return (bootsel_result==BootselEvent::LongPress);
 }
 
 void ButtonManager::wait_for_any_button() {
@@ -126,3 +133,5 @@ void ButtonManager::wait_for_any_button() {
         sleep_ms(10);
     }
 }
+
+

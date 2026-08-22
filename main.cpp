@@ -32,6 +32,8 @@
 #include "project_libraries/ram_disk.h"
 #include "project_libraries/network.h"
 
+const int CLOCK_SIZE = 7;
+
 using namespace pimoroni;
 
 // Instantiate Screen
@@ -122,12 +124,19 @@ void show_info(){
     screen.writeln("VOLTAGE: " + voltage_id + "V","pink");
 
     screen.update();
-     while(true) {
-        buttonmgr.update();
-        if (buttonmgr.is_y()) break;
-     }
+
+       while(buttonmgr.update()==Action::None) {
+        sleep_ms(10);
+       }
+
     // restore main screen buttons here
     screen.clear();
+    screen.draw_clock_time(
+        get_time(std::stoi(read_key("CONFIG.TXT", "TIMEZONE"))),
+        "white",
+        CLOCK_SIZE,
+        true
+    );
     screen.default_buttonhints();
     return;
 }
@@ -188,14 +197,9 @@ void draw_clock(int tz_offset) {
     const int current_second =
         static_cast<int>(::time(nullptr) % 60);
 
-    const bool activity = buttonmgr.any_pressed();
+    buttonmgr.wait_for_any_button();
 
-    /*
-     * Activitat detectada.
-     */
-    if (activity) {
-        last_activity = now;
-    }
+    last_activity = now;
 
     /*
      * Sortida del mode screensaver.
@@ -203,7 +207,7 @@ void draw_clock(int tz_offset) {
      * Netegem la pantalla, recuperem els button hints
      * i redibuixem immediatament tot el rellotge.
      */
-    if (activity && screensaver_mode) {
+    if (screensaver_mode) {
         screensaver_mode = false;
 
         screen.clear();
@@ -451,12 +455,31 @@ int main() {
 
     // main loop
     while(true) {
-        buttonmgr.update();
-        //if (buttonmgr.is_a()) led.new_blink(5,500,"blue");
-        if (buttonmgr.is_bootsel_long()) reset_usb_boot(0, 0);
-        if (buttonmgr.is_a()) expose_drive();
-        if (buttonmgr.is_bootsel_single()) reboot();
-        if (buttonmgr.is_y()) show_info();
+        Action action = buttonmgr.update();
+
+        switch (action) {
+            case Action::UsbBoot:
+                reset_usb_boot(0, 0);
+                break;
+
+            case Action::Reboot:
+                reboot();
+                break;
+
+            case Action::ExposeDisk:
+                expose_drive();
+                break;
+
+            case Action::ShowInfo:
+                show_info();
+                break;
+
+            case Action::None:
+                break;
+
+            default:
+                break;
+    }
 
         draw_clock(tz_offset);
         led.blink_update();

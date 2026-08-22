@@ -4,64 +4,54 @@
 #include "button.hpp"
 #include "pico_display_2.hpp"
 
+#include "icons.h"
+
 using namespace pimoroni;
-
-enum class BootselEvent {
-    None,
-    SinglePress,
-    DoublePress,
-    LongPress
-};
-
-enum class ButtonEvent {
-    None,
-    A,
-    B,
-    X,
-    Y
-};
 
 class ButtonManager {
 
-public:
-    ButtonManager();
+    public:
+        ButtonManager();
 
-    ButtonEvent get_button_event() const;
+        // update button states an return action associated with the 
+        // button that was pressed. If no button was pressed, returns None.
+        Action update();
 
-    // return a pointer to a null terminated string 
-    const char* update();
+        // this will assign actions to buttons
+        void set_action(char button, Action action);
+        void clear_action(char button);
+        void clear_actions();
 
-    // this will assign actions to buttons
-    void set_action(char button, const char* action);
-    void clear_action(char button);
-    void clear_actions();
+        // wait until a new button is pressed.
+        void wait_for_any_button();
 
-    bool is_a();
-    bool is_b();
-    bool is_x();
-    bool is_y();
-    void wait_for_any_button();
+    private:
+        Button button_a;
+        Button button_b;
+        Button button_x;
+        Button button_y;
 
-private:
-    Button button_a;
-    Button button_b;
-    Button button_x;
-    Button button_y;
+        // previous button states to detect changes
+        bool last_a = false;
+        bool last_b = false;
+        bool last_x = false;
+        bool last_y = false;
 
-    bool last_a = false;
-    bool last_b = false;
-    bool last_x = false;
-    bool last_y = false;
+        // actions associated with A, B, X and Y
+        Action button_actions[4] = {
+            Action::None,
+            Action::None,
+            Action::None,
+            Action::None
+        };
 
-    enum State { IDLE, PRESSED, RELEASED };
-    State bootsel_state = IDLE;
-    absolute_time_t last_bootsel_press = at_the_end_of_time;
-    absolute_time_t bootsel_press_start;
-    int bootsel_click_count = 0;
-    BootselEvent bootsel_result = BootselEvent::None;
-    BootselEvent get_bootsel_event() const;
-    ButtonEvent button_result = ButtonEvent::None;
+        // BOOTSEL state
+        bool bootsel_was_pressed = false;
+        bool bootsel_long_handled = false;
+        absolute_time_t bootsel_press_start {};
 
-
-
+        // Helpers
+        int button_to_index(char button) const;
+        bool any_pressed();
+        
 };
