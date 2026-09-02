@@ -9,6 +9,10 @@
 #define SNTP_COMP_ROUNDTRIP 1
 #define SNTP_STARTUP_DELAY 0
 
+#define LWIP_ALTCP 1
+#define LWIP_ALTCP_TLS 1
+#define LWIP_ALTCP_TLS_MBEDTLS 1
+
 // Standard function to set the time 
 /* #define SNTP_SET_SYSTEM_TIME_US(sec, us) do { \
     struct timeval tv = { sec, us }; \

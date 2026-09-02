@@ -50,7 +50,6 @@ message(STATUS "Reserved disk size: ${PICO_DISK_SIZE_KB} KB")
 # adjust space for programs accordingly
 math(EXPR PICO_FLASH_SIZE "(${PICO_TOTAL_FLASH_KB} - ${PICO_DISK_SIZE_KB}) * 1024")
 
-
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
@@ -60,7 +59,6 @@ add_executable(${NAME}
     project_libraries/color.cpp
     project_libraries/my_screen.cpp
     project_libraries/my_led.cpp
-    project_libraries/bootsel.cpp
     project_libraries/buttonmgr.cpp
     project_libraries/msc_disk.cpp
     project_libraries/diskio.cpp
@@ -103,6 +101,10 @@ target_link_libraries(${NAME}
     pico_stdlib 
     #pico_cyw43_arch_none
     pico_cyw43_arch_lwip_threadsafe_background
+    pico_lwip_sntp
+    pico_lwip_http
+    pico_lwip_mbedtls
+    pico_mbedtls
     hardware_clocks
     hardware_pio
     st7789

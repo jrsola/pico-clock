@@ -9,7 +9,6 @@
 using namespace pimoroni;
 
 class ButtonManager {
-
     public:
         ButtonManager();
 
@@ -53,5 +52,5 @@ class ButtonManager {
         // Helpers
         int button_to_index(char button) const;
         bool any_pressed();
-        
+        static bool get_bootsel_button();        
 };

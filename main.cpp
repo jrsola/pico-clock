@@ -25,7 +25,6 @@
 #include "project_libraries/color.h"
 #include "project_libraries/my_screen.h"
 #include "project_libraries/my_led.h"
-#include "project_libraries/bootsel.h"
 #include "project_libraries/buttonmgr.h"
 #include "project_libraries/msc_disk.h"
 #include "project_libraries/filesystem.h"
@@ -122,6 +121,9 @@ void show_info(){
     screen.writeln("BOARD ID: " + board_id,"green");
     std::string voltage_id = info_voltage();
     screen.writeln("VOLTAGE: " + voltage_id + "V","pink");
+    std::string body;
+    https_get("ipapi.co", "/json/", body);
+    screen.writeln(body);
 
     screen.update();
 
