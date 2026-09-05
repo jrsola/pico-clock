@@ -6,6 +6,11 @@
 
 #include "icons.h"
 
+struct ButtonEvent{
+    bool activity = false;
+    Action action = Action::None;
+};
+
 using namespace pimoroni;
 
 class ButtonManager {
@@ -14,7 +19,7 @@ class ButtonManager {
 
         // update button states an return action associated with the 
         // button that was pressed. If no button was pressed, returns None.
-        Action update();
+        ButtonEvent update();
 
         // this will assign actions to buttons
         void set_action(char button, Action action);

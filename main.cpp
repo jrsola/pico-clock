@@ -32,6 +32,7 @@
 #include "project_libraries/network.h"
 
 const int CLOCK_SIZE = 7;
+int tz_offset = 0;
 
 using namespace pimoroni;
 
@@ -46,7 +47,7 @@ myLED led;
 
 
 // Get formatted current time as string
-std::string get_time(int tz_offset) {
+std::string get_time() {
     time_t now = time(NULL);
     now += tz_offset * 3600;
     struct tm *timeinfo = localtime(&now);
@@ -127,14 +128,14 @@ void show_info(){
 
     screen.update();
 
-       while(buttonmgr.update()==Action::None) {
+       while(buttonmgr.update().activity==false) {
         sleep_ms(10);
        }
 
     // restore main screen buttons here
     screen.clear();
     screen.draw_clock_time(
-        get_time(std::stoi(read_key("CONFIG.TXT", "TIMEZONE"))),
+        get_time(),
         "white",
         CLOCK_SIZE,
         true
@@ -148,7 +149,7 @@ void bootup(){
     //booting process should be moved here
 }
 
-void draw_clock(int tz_offset) {
+void draw_clock(bool user_activity) {
     static absolute_time_t last_activity = get_absolute_time();
     static absolute_time_t last_move = get_absolute_time();
 
@@ -174,13 +175,9 @@ void draw_clock(int tz_offset) {
     const int horizontal_length = size * 5;
     const int vertical_length = (horizontal_length * 7) / 4;
 
-    const int digit_width =
-        thickness * 2 +
-        horizontal_length;
+    const int digit_width = thickness * 2 + horizontal_length;
 
-    const int digit_height =
-        thickness * 3 +
-        vertical_length * 2;
+    const int digit_height = thickness * 3 + vertical_length * 2;
 
     const int digit_gap = size * 2;
     const int colon_width = size;
@@ -199,134 +196,133 @@ void draw_clock(int tz_offset) {
     const int current_second =
         static_cast<int>(::time(nullptr) % 60);
 
-    buttonmgr.wait_for_any_button();
+    // there's been user activity 
+    // reset inativity timer
+    if (user_activity) {
+        last_activity = now;
 
-    last_activity = now;
+        // if screensaver is active, return to normal mode
+        if (screensaver_mode) {
+            screensaver_mode = false;
 
-    /*
-     * Sortida del mode screensaver.
-     *
-     * Netegem la pantalla, recuperem els button hints
-     * i redibuixem immediatament tot el rellotge.
-     */
-    if (screensaver_mode) {
-        screensaver_mode = false;
-
-        screen.clear();
-        screen.default_buttonhints();
-
-        screen.draw_clock_time(
-            get_time(tz_offset),
-            "white",
-            CLOCK_SIZE,
-            true
-        );
-
-        last_drawn_second = current_second;
-
-        return;
-    }
-
-    const int64_t inactive_ms =
-        absolute_time_diff_us(last_activity, now) / 1000;
-
-    /*
-     * Entrada al mode screensaver.
-     */
-    if (!screensaver_mode &&
-        inactive_ms >= BUTTONHINT_TIMEOUT_SECONDS * 1000) {
-
-        screensaver_mode = true;
-
-        screen.clear();
-
-        clock_x = (screen_width - clock_width) / 2;
-        clock_y = 30;
-
-        last_move = now;
-
-        screen.draw_clock_time(
-            clock_x,
-            clock_y,
-            get_time(tz_offset),
-            "white",
-            CLOCK_SIZE,
-            true
-        );
-
-        last_drawn_second = current_second;
-
-        return;
-    }
-
-    /*
-     * Mode screensaver.
-     */
-    if (screensaver_mode) {
-        const int64_t move_elapsed_ms =
-            absolute_time_diff_us(last_move, now) / 1000;
-
-        bool clock_moved = false;
-
-        if (move_elapsed_ms >= CLOCK_MOVE_INTERVAL_MS) {
-            last_move = now;
-
-            clock_x += dx;
-            clock_y += dy;
-
-            if (clock_x <= 0) {
-                clock_x = 0;
-                dx = -dx;
-            }
-
-            if (clock_x + clock_width >= screen_width) {
-                clock_x = screen_width - clock_width;
-                dx = -dx;
-            }
-
-            if (clock_y <= 0) {
-                clock_y = 0;
-                dy = -dy;
-            }
-
-            if (clock_y + clock_height >= screen_height) {
-                clock_y = screen_height - clock_height;
-                dy = -dy;
-            }
-
-            clock_moved = true;
-        }
-
-        /*
-         * Si el rellotge s'ha mogut:
-         * esborrem i redibuixem tots els dígits.
-         */
-        if (clock_moved) {
             screen.clear();
+            screen.default_buttonhints();
+
+            screen.draw_clock_time(
+                get_time(),
+                "white",
+                CLOCK_SIZE,
+                true);
+
+            last_drawn_second = current_second;
+
+            return;
+        }
+    }
+
+    // calculate inactivity regardless of activity in this iteraction
+        const int64_t inactive_ms = absolute_time_diff_us(last_activity, now) / 1000;
+
+        // enter screensaver
+        if (!screensaver_mode && inactive_ms >= BUTTONHINT_TIMEOUT_SECONDS * 1000) {
+
+            screensaver_mode = true;
+
+            screen.clear();
+
+            clock_x = (screen_width - clock_width) / 2;
+            clock_y = 30;
+
+            last_move = now;
 
             screen.draw_clock_time(
                 clock_x,
                 clock_y,
-                get_time(tz_offset),
+                get_time(),
                 "white",
                 CLOCK_SIZE,
-                true
-            );
+                true);
 
             last_drawn_second = current_second;
 
             return;
         }
 
-        /*
-         * Si només ha canviat el segon,
-         * draw_clock_time actualitzarà els dos punts.
-         */
+        // screensaver mode
+        if (screensaver_mode) {
+            const int64_t move_elapsed_ms = absolute_time_diff_us(last_move, now) / 1000;
+
+            bool clock_moved = false;
+
+            // move clock periodically
+            if (move_elapsed_ms >= CLOCK_MOVE_INTERVAL_MS) {
+                last_move = now;
+
+                clock_x += dx;
+                clock_y += dy;
+
+                if (clock_x <= 0) {
+                    clock_x = 0;
+                    dx = -dx;
+                }
+
+                if (clock_x + clock_width >= screen_width) {
+                    clock_x = screen_width - clock_width;
+                    dx = -dx;
+                }
+
+                if (clock_y <= 0) {
+                    clock_y = 0;
+                    dy = -dy;
+                }
+
+                if (clock_y + clock_height >= screen_height) {
+                    clock_y = screen_height - clock_height;
+                    dy = -dy;
+                }
+
+                clock_moved = true;
+            }
+
+            // if clock moved, clear and redraw everything
+            if (clock_moved) {
+                screen.clear();
+
+                screen.draw_clock_time(
+                    clock_x,
+                    clock_y,
+                    get_time(),
+                    "white",
+                    CLOCK_SIZE,
+                    true
+                );
+
+                last_drawn_second = current_second;
+
+                return;
+            }
+
+            // otherwise, update once per second.
+            if (current_second != last_drawn_second) {
+                screen.draw_clock_time(
+                    clock_x,
+                    clock_y,
+                    get_time(),
+                    "white",
+                    CLOCK_SIZE,
+                    false
+                );
+
+                last_drawn_second = current_second;
+            }
+
+            return;
+        }
+
+        // normal clock mode
         if (current_second != last_drawn_second) {
             screen.draw_clock_time(
-                clock_x,
-                clock_y,
-                get_time(tz_offset),
+                get_time(),
                 "white",
                 CLOCK_SIZE,
                 false
@@ -334,27 +330,7 @@ void draw_clock(int tz_offset) {
 
             last_drawn_second = current_second;
         }
-
-        return;
     }
-
-    /*
-     * Mode normal.
-     *
-     * Només actualitzem una vegada per segon.
-     */
-    if (current_second != last_drawn_second) {
-        screen.draw_clock_time(
-            get_time(tz_offset),
-            "white",
-            CLOCK_SIZE,
-            false
-        );
-
-        last_drawn_second = current_second;
-    }
-}
-
 
 
 int main() {
@@ -429,8 +405,12 @@ int main() {
 
    // wait 10 seconds for the time to get acquired or show error
     while (!network_time_is_synced()) {
-        if (absolute_time_diff_us(start, get_absolute_time()) >= 10 * 1000 * 1000) break;
-    }
+        if (absolute_time_diff_us(start, get_absolute_time()) >= 10'000'000) {
+            break;
+        }
+
+    sleep_ms(10);
+}
 
     if (network_time_is_synced()){
         screen.show_boot_message("TIME IS SYNCHRONIZED", "green");
@@ -445,7 +425,7 @@ int main() {
         screen.show_boot_message("CONFIGURE TZ IN CONFIG FILE", "red");
         buttonmgr.wait_for_any_button();
     }
-    int tz_offset = std::stoi(read_key("CONFIG.TXT", "TIMEZONE"));
+    tz_offset = std::stoi(read_key("CONFIG.TXT", "TIMEZONE"));
     screen.show_boot_message("TZ LOADED", "green");
 
     std::string time_string;
@@ -457,34 +437,37 @@ int main() {
 
     // main loop
     while(true) {
-        Action action = buttonmgr.update();
+        ButtonEvent event = buttonmgr.update();
 
-        switch (action) {
-            case Action::UsbBoot:
-                reset_usb_boot(0, 0);
-                break;
-
-            case Action::Reboot:
-                reboot();
-                break;
-
-            case Action::ExposeDisk:
-                expose_drive();
-                break;
-
-            case Action::ShowInfo:
-                show_info();
-                break;
-
-            case Action::None:
-                break;
-
-            default:
-                break;
-    }
-
-        draw_clock(tz_offset);
+        draw_clock(event.activity);
+        
         led.blink_update();
         screen.update();
+
+        if (event.activity) {
+            switch (event.action) {
+                case Action::UsbBoot:
+                    reset_usb_boot(0, 0);
+                    break;
+
+                case Action::Reboot:
+                    reboot();
+                    break;
+
+                case Action::ExposeDisk:
+                    expose_drive();
+                    break;
+
+                case Action::ShowInfo:
+                    show_info();
+                    break;
+
+                // button pressed but no action assigned.
+                // do nothing.
+                case Action::None:
+                default:
+                    break;
+            }
+        }
     }
 }

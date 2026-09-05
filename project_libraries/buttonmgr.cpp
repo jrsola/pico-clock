@@ -15,8 +15,10 @@ ButtonManager::ButtonManager()
       button_y(PicoDisplay2::Y)
 {}
 
-Action ButtonManager::update() {
+ButtonEvent ButtonManager::update() {
     absolute_time_t now = get_absolute_time();
+
+    ButtonEvent event;
 
     //--------------------------
     // BOOTSEL button handling
@@ -27,9 +29,11 @@ Action ButtonManager::update() {
     if (bootsel_pressed && !bootsel_was_pressed) {
         bootsel_press_start = now;
         bootsel_long_handled = false;
+
+        event.activity = true;
     }
 
-    // BOOTSEL button still pressed
+    // BOOTSEL button still pressed -> firmware load 
     if (bootsel_pressed && bootsel_was_pressed && !bootsel_long_handled) {
         int64_t press_duration_ms = absolute_time_diff_us(bootsel_press_start, now) / 1000;
 
@@ -37,17 +41,23 @@ Action ButtonManager::update() {
         if (press_duration_ms >= 1000) {
             bootsel_long_handled = true;
             bootsel_was_pressed = bootsel_pressed;
-            return Action::UsbBoot;
+            
+            event.activity = true;
+            event.action = Action::UsbBoot;
+
+            return event;
         }
     }
 
-    // BOOTSEL button released
+    // BOOTSEL button released -> reboot
     if (!bootsel_pressed && bootsel_was_pressed) {
         bootsel_was_pressed = false;
 
         // it was not a long press, regular reboot
         if (!bootsel_long_handled) {
-            return Action::Reboot;
+            event.activity = true;
+            event.action = Action::Reboot;
+            return event;
         }
     }
     
@@ -63,17 +73,29 @@ Action ButtonManager::update() {
 
     Action action = Action::None;
 
-    if (current_a && !last_a) action = button_actions[0];
-    else if (current_b && !last_b) action = button_actions[1];
-    else if (current_x && !last_x) action = button_actions[2];
-    else if (current_y && !last_y) action = button_actions[3];
+    if (current_a && !last_a) {
+        event.activity = true;
+        event.action = button_actions[0];
+    }
+    else if (current_b && !last_b) {
+        event.activity = true;
+        event.action = button_actions[1];
+    }
+    else if (current_x && !last_x) {
+        event.activity = true;
+        event.action = button_actions[2];
+    }
+    else if (current_y && !last_y) {
+        event.activity = true;
+        event.action = button_actions[3];
+    }
 
     last_a = current_a;
     last_b = current_b;
     last_x = current_x;
     last_y = current_y;
 
-    return action;
+    return event;
 }
 
 int ButtonManager::button_to_index(char button) const {
