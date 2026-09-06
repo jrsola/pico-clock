@@ -32,7 +32,7 @@
 #include "project_libraries/network.h"
 
 const int CLOCK_SIZE = 7;
-int tz_offset = 0;
+
 
 using namespace pimoroni;
 
@@ -45,11 +45,13 @@ ButtonManager buttonmgr;
 // Instantiate LED
 myLED led;
 
+// offset in seconds from UTC to local time
+int tz_offset = 0;
 
 // Get formatted current time as string
 std::string get_time() {
     time_t now = time(NULL);
-    now += tz_offset * 3600;
+    now += tz_offset;
     struct tm *timeinfo = localtime(&now);
     
     char buffer[9]; // "hh:mm:ss" format 9 chars (8+null)
@@ -57,6 +59,48 @@ std::string get_time() {
     
     return std::string(buffer);
 } 
+
+// looks in a JSON text for a key and returns the value associated
+static std::string json_get_key_value(const std::string& json, const std::string& key) {
+
+    size_t pos = 0;
+
+    // let's move the position of the value past the "key" (enclosed in quotes) 
+    // then ":" (that divides key and value) and then the initial quotes of the value
+    // if not found, return empty string
+    for (const std::string& token : {"\"" + key + "\"", std::string(":"), std::string("\"")}) {
+        // if the value is not found (npos) then return empty 
+        if ((pos = json.find(token, pos)) == std::string::npos) return "";
+        // otherwise, advance the position and search next iteration
+        pos += token.length();
+    }
+
+    // look for the ending quote after the value, if not found will be npos
+    size_t end = json.find('"', pos);
+    // if end is npos return empty, otherwise return the value
+    return (end == std::string::npos) ? "" : json.substr(pos, end - pos);
+}
+
+// offset stores the difference in seconds to apply to UTC time to get local time
+// this function gets a string in the format "+HHMM" or "-HHMM" and stores the offset
+// returns true if done, false if error
+static bool utc_offset_to_seconds(const std::string& offset) {
+    if (offset.size() != 5 || (offset[0] != '+' && offset[0] != '-'))
+        return false;
+
+    for (int i = 1; i < 5; ++i) {
+        if (offset[i] < '0' || offset[i] > '9') return false;
+    }
+        
+    int hours = (offset[1] - '0') * 10 + (offset[2] - '0');
+    int minutes = (offset[3] - '0') * 10 + (offset[4] - '0');
+
+    if (hours > 14 || minutes > 59) return false;
+
+    tz_offset = (hours * 3600 + minutes *60) * (offset[0] == '-' ? -1 : 1);
+    
+    return true;
+}
 
 std::string info_board(){
     char id_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1];
@@ -429,6 +473,17 @@ int main() {
     screen.show_boot_message("TZ LOADED", "green");
 
     std::string time_string;
+
+    std::string body;
+    if (https_get("ipapi.co", "/json/", body)) {
+        std::string timezone = json_get_key_value(body, "timezone");
+        std::string utc_offset = json_get_key_value(body, "utc_offset");
+        
+        if (utc_offset_to_seconds(utc_offset)){
+            screen.show_boot_message("TIMEZONE: "+ timezone, "green");
+        }
+    }
+
 
     screen.clear("black",20);
 

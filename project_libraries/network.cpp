@@ -82,11 +82,7 @@ static void http_result_callback(
     request->finished = true;
 }
 
-bool https_get(
-    const std::string& host,
-    const std::string& path,
-    std::string& body
-) {
+bool https_get(const std::string& host, const std::string& path, std::string& body) {
     HttpRequest request;
 
     struct altcp_tls_config* tls_config =
