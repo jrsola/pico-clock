@@ -4,6 +4,7 @@
 
 enum class Action {
     None,
+    Empty,
     Reboot,
     UsbBoot,
     Favorites,

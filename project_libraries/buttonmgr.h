@@ -6,28 +6,26 @@
 
 #include "icons.h"
 
-struct ButtonEvent{
-    bool activity = false;
-    Action action = Action::None;
-};
-
 using namespace pimoroni;
 
 class ButtonManager {
     public:
+        // class constructor
         ButtonManager();
 
-        // update button states an return action associated with the 
-        // button that was pressed. If no button was pressed, returns None.
-        ButtonEvent update();
+        // Returns:
+        // Action::None  -> no button pressed
+        // Action::Empty -> a button was pressed, but it has no associated action
+        // otherwise     -> action assigned to the pressed button.
+        Action update();
 
-        // this will assign actions to buttons
+        // assign actions to buttons
         void set_action(char button, Action action);
         void clear_action(char button);
         void clear_actions();
 
         // wait until a new button is pressed.
-        void wait_for_any_button();
+        void wait_for_button();
 
     private:
         Button button_a;
@@ -43,18 +41,19 @@ class ButtonManager {
 
         // actions associated with A, B, X and Y
         Action button_actions[4] = {
-            Action::None,
-            Action::None,
-            Action::None,
-            Action::None
+            Action::Empty,
+            Action::Empty,
+            Action::Empty,
+            Action::Empty
         };
 
         // BOOTSEL state
         bool bootsel_was_pressed = false;
         bool bootsel_long_handled = false;
+        // this initializes bootsel_press_start with zero
         absolute_time_t bootsel_press_start {};
 
-        // Helpers
+        // helpers
         int button_to_index(char button) const;
         bool any_pressed();
         static bool get_bootsel_button();        

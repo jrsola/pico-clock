@@ -8,6 +8,13 @@
 
 using namespace pimoroni;
 
+// constructor, assigns the hardware buttons in PicoDisplay2
+// to each of our 4 logical buttons
+// buttonmgr
+// ├─ button_a → A
+// ├─ button_b → B
+// ├─ button_x → X
+// └─ button_y → Y
 ButtonManager::ButtonManager()
     : button_a(PicoDisplay2::A),
       button_b(PicoDisplay2::B),
@@ -15,49 +22,44 @@ ButtonManager::ButtonManager()
       button_y(PicoDisplay2::Y)
 {}
 
-ButtonEvent ButtonManager::update() {
+Action ButtonManager::update() {
     absolute_time_t now = get_absolute_time();
 
-    ButtonEvent event;
-
-    //--------------------------
+    // *********************** 
     // BOOTSEL button handling
-    //--------------------------
+    // ***********************
+
+    // is the bootsel button pressed?
     bool bootsel_pressed = get_bootsel_button();
 
-    // BOOTSEL button pressed for the first time
+    // bootsel button pressed for the first time, 
+    // just log it and return
     if (bootsel_pressed && !bootsel_was_pressed) {
-        bootsel_press_start = now;
-        bootsel_long_handled = false;
-
-        event.activity = true;
+        bootsel_press_start = now; // time when first press detected
+        bootsel_long_handled = false; // it's not a long press (yet?)
+        bootsel_was_pressed = true; // register the button was already pressed
+        return Action::Empty;
     }
 
-    // BOOTSEL button still pressed -> firmware load 
+    // bootsel button was pressed and it's still pressed 
+    // but long press action was not handled (we did not initiate any action) 
+    // long press -> firmware load boot 
+    // calculate if it qualifies for a long press (more than 1 second)
     if (bootsel_pressed && bootsel_was_pressed && !bootsel_long_handled) {
-        int64_t press_duration_ms = absolute_time_diff_us(bootsel_press_start, now) / 1000;
-
-        // long press
-        if (press_duration_ms >= 1000) {
+        if (absolute_time_diff_us(bootsel_press_start, now) / 1000 >= 1000) {
             bootsel_long_handled = true;
             bootsel_was_pressed = bootsel_pressed;
-            
-            event.activity = true;
-            event.action = Action::UsbBoot;
-
-            return event;
+            return Action::UsbBoot;
         }
     }
 
-    // BOOTSEL button released -> reboot
+    // bootsel button was pressed, but it's not pressed now 
     if (!bootsel_pressed && bootsel_was_pressed) {
         bootsel_was_pressed = false;
 
-        // it was not a long press, regular reboot
+        // reboot if it's a short press
         if (!bootsel_long_handled) {
-            event.activity = true;
-            event.action = Action::Reboot;
-            return event;
+            return Action::Reboot;
         }
     }
     
@@ -74,20 +76,16 @@ ButtonEvent ButtonManager::update() {
     Action action = Action::None;
 
     if (current_a && !last_a) {
-        event.activity = true;
-        event.action = button_actions[0];
+        action = button_actions[0];
     }
     else if (current_b && !last_b) {
-        event.activity = true;
-        event.action = button_actions[1];
+        action = button_actions[1];
     }
     else if (current_x && !last_x) {
-        event.activity = true;
-        event.action = button_actions[2];
+        action = button_actions[2];
     }
     else if (current_y && !last_y) {
-        event.activity = true;
-        event.action = button_actions[3];
+        action = button_actions[3];
     }
 
     last_a = current_a;
@@ -95,7 +93,7 @@ ButtonEvent ButtonManager::update() {
     last_x = current_x;
     last_y = current_y;
 
-    return event;
+    return action;
 }
 
 int ButtonManager::button_to_index(char button) const {
@@ -128,12 +126,12 @@ void ButtonManager::set_action(char button, Action action) {
 
 void ButtonManager::clear_action(char button) {
     int index = button_to_index(button);
-    if (index != -1) button_actions[index] = Action::None;
+    if (index != -1) button_actions[index] = Action::Empty;
 }
 
 void ButtonManager::clear_actions() {
     for (int i = 0; i < 4; ++i) {
-        button_actions[i] = Action::None;
+        button_actions[i] = Action::Empty;
     }
 }
 
@@ -145,8 +143,8 @@ bool ButtonManager::any_pressed() {
            get_bootsel_button();
 }
 
-void ButtonManager::wait_for_any_button() {
-    // wait until no button is pressed (if any)
+void ButtonManager::wait_for_button() {
+    // wait until no button is pressed
     while (any_pressed()) {
         update();
         sleep_ms(10);

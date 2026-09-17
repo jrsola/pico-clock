@@ -172,7 +172,7 @@ void show_info(){
 
     screen.update();
 
-       while(buttonmgr.update().activity==false) {
+       while(buttonmgr.update() == Action::None) {
         sleep_ms(10);
        }
 
@@ -411,7 +411,7 @@ int main() {
         write_key("CONFIG.TXT", "WIFI_NAME", "WRITE WIFI NAME HERE");
         write_key("CONFIG.TXT", "WIFI_PASSWORD", "WRITE WIFI PASSWORD HERE");
         screen.show_boot_message("WIFI CONFIG NEEDED. ANY BUTTON TO CONTIUNE.");
-        buttonmgr.wait_for_any_button();
+        buttonmgr.wait_for_button();
     }
     // 4. filesystem initialized
     screen.show_boot_message("FILESYSTEM INITIALIZED");
@@ -433,7 +433,7 @@ int main() {
         screen.show_boot_message("ERROR CONNECTING TO WIFI", "red");
         sleep_ms(3000);
         screen.show_boot_message("CHECK NETWORK CONFIG", "orange");
-        buttonmgr.wait_for_any_button();
+        buttonmgr.wait_for_button();
     }
 
     // 9 & 10 SNTP client 
@@ -460,14 +460,14 @@ int main() {
         screen.show_boot_message("TIME IS SYNCHRONIZED", "green");
     } else {
         screen.show_boot_message("TIME SYNC ERROR", "red");
-        buttonmgr.wait_for_any_button();
+        buttonmgr.wait_for_button();
     }
 
     // 13 read timezone
     if (read_key("CONFIG.TXT", "TIMEZONE").empty()){
         write_key("CONFIG.TXT", "TIMEZONE", "0");
         screen.show_boot_message("CONFIGURE TZ IN CONFIG FILE", "red");
-        buttonmgr.wait_for_any_button();
+        buttonmgr.wait_for_button();
     }
     tz_offset = std::stoi(read_key("CONFIG.TXT", "TIMEZONE"));
     screen.show_boot_message("TZ LOADED", "green");
@@ -475,9 +475,11 @@ int main() {
     std::string time_string;
 
     std::string body;
-    if (https_get("ipapi.co", "/json/", body)) {
+    if (https_get("time.now", "/developer/api/ip", body)) {
         std::string timezone = json_get_key_value(body, "timezone");
         std::string utc_offset = json_get_key_value(body, "utc_offset");
+
+        screen.show_boot_message("TIMEZONE: "+ timezone, "green");
         
         if (utc_offset_to_seconds(utc_offset)){
             screen.show_boot_message("TIMEZONE: "+ timezone, "green");
@@ -492,37 +494,36 @@ int main() {
 
     // main loop
     while(true) {
-        ButtonEvent event = buttonmgr.update();
+        Action action = buttonmgr.update();
 
-        draw_clock(event.activity);
+        draw_clock(action != Action::None);
         
         led.blink_update();
         screen.update();
 
-        if (event.activity) {
-            switch (event.action) {
-                case Action::UsbBoot:
-                    reset_usb_boot(0, 0);
-                    break;
+        switch (action) {
+            case Action::UsbBoot:
+                reset_usb_boot(0, 0);
+                break;
 
-                case Action::Reboot:
-                    reboot();
-                    break;
+            case Action::Reboot:
+                reboot();
+                break;
 
-                case Action::ExposeDisk:
-                    expose_drive();
-                    break;
+            case Action::ExposeDisk:
+                expose_drive();
+                break;
 
-                case Action::ShowInfo:
-                    show_info();
-                    break;
+            case Action::ShowInfo:
+                show_info();
+                break;
 
-                // button pressed but no action assigned.
-                // do nothing.
-                case Action::None:
-                default:
-                    break;
-            }
+            // button pressed but no action assigned.
+            // do nothing.
+            case Action::Empty:
+            case Action::None:
+            default:
+                break;
         }
     }
 }
