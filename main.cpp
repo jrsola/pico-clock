@@ -127,7 +127,7 @@ void reboot(){
         watchdog_reboot(0,0,0);
 }
 
-void expose_drive(){
+void expose_disk(){
     unmountfs();
     sleep_ms(1000);
     usb_msc_init();
@@ -474,17 +474,17 @@ int main() {
 
     std::string time_string;
 
-    std::string body;
-    if (https_get("time.now", "/developer/api/ip", body)) {
-        std::string timezone = json_get_key_value(body, "timezone");
-        std::string utc_offset = json_get_key_value(body, "utc_offset");
+    // std::string body;
+    // if (https_get("time.now", "/developer/api/ip", body)) {
+    //     std::string timezone = json_get_key_value(body, "timezone");
+    //     std::string utc_offset = json_get_key_value(body, "utc_offset");
 
-        screen.show_boot_message("TIMEZONE: "+ timezone, "green");
+    //     screen.show_boot_message("TIMEZONE: "+ timezone, "green");
         
-        if (utc_offset_to_seconds(utc_offset)){
-            screen.show_boot_message("TIMEZONE: "+ timezone, "green");
-        }
-    }
+    //     if (utc_offset_to_seconds(utc_offset)){
+    //         screen.show_boot_message("TIMEZONE: "+ timezone, "green");
+    //     }
+    // }
 
 
     screen.clear("black",20);
@@ -511,7 +511,7 @@ int main() {
                 break;
 
             case Action::ExposeDisk:
-                expose_drive();
+                expose_disk();
                 break;
 
             case Action::ShowInfo:

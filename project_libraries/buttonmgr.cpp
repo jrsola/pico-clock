@@ -15,15 +15,76 @@ using namespace pimoroni;
 // ├─ button_b → B
 // ├─ button_x → X
 // └─ button_y → Y
-ButtonManager::ButtonManager()
+ButtonArea::ButtonArea()
     : button_a(PicoDisplay2::A),
       button_b(PicoDisplay2::B),
       button_x(PicoDisplay2::X),
       button_y(PicoDisplay2::Y)
 {}
 
+void ButtonArea::update() {
+    button_a.update();
+    button_b.update();
+    button_x.update();
+    button_y.update();
+}
+
+ActionButton* ButtonArea::get_button(char button) {
+    switch (button) {
+        case 'a':
+        case 'A':
+            return &button_a;
+
+        case 'b':
+        case 'B':
+            return &button_b;
+
+        case 'x':
+        case 'X':
+            return &button_x;
+
+        case 'y':
+        case 'Y':
+            return &button_y;
+
+        default:
+            return nullptr;
+    }
+}
+
+void ButtonArea::set_action(char button, Action action) {
+    ActionButton* b = get_button(button);
+    if (b) b->action = action;
+}
+
+void ButtonArea::clear_action(char button) {
+    ActionButton* b = get_button(button);
+    if (b) b->action = Action::Empty;
+}
+
+void ButtonArea::clear_actions() {
+    button_a.action = Action::Empty;
+    button_b.action = Action::Empty;
+    button_x.action = Action::Empty;
+    button_y.action = Action::Empty;
+}
+
+bool ButtonArea::any_pressed() {
+    return button_a.raw() ||
+           button_b.raw() ||
+           button_x.raw() ||
+           button_y.raw();
+}
+
+// class constructor
+ButtonManager::ButtonManager();
+
 Action ButtonManager::update() {
+
     absolute_time_t now = get_absolute_time();
+
+    // update button area
+    button_area.update();
 
     // *********************** 
     // BOOTSEL button handling
@@ -65,81 +126,11 @@ Action ButtonManager::update() {
     
     bootsel_was_pressed = bootsel_pressed;
 
-    // *********************
-    // a/b/x/y button events
-    // *********************
-    bool current_a = button_a.raw();
-    bool current_b = button_b.raw();
-    bool current_x = button_x.raw();
-    bool current_y = button_y.raw();
-
-    Action action = Action::None;
-
-    if (current_a && !last_a) {
-        action = button_actions[0];
-    }
-    else if (current_b && !last_b) {
-        action = button_actions[1];
-    }
-    else if (current_x && !last_x) {
-        action = button_actions[2];
-    }
-    else if (current_y && !last_y) {
-        action = button_actions[3];
-    }
-
-    last_a = current_a;
-    last_b = current_b;
-    last_x = current_x;
-    last_y = current_y;
-
-    return action;
-}
-
-int ButtonManager::button_to_index(char button) const {
-    switch (button) {
-        case 'a':
-        case 'A':
-            return 0;
-
-        case 'b':
-        case 'B':
-            return 1;
-
-        case 'x':
-        case 'X':
-            return 2;
-
-        case 'y':
-        case 'Y':
-            return 3;
-
-        default:
-            return -1;
-    }
-}
-
-void ButtonManager::set_action(char button, Action action) {
-    int index = button_to_index(button);
-    if (index != -1) button_actions[index] = action;
-}
-
-void ButtonManager::clear_action(char button) {
-    int index = button_to_index(button);
-    if (index != -1) button_actions[index] = Action::Empty;
-}
-
-void ButtonManager::clear_actions() {
-    for (int i = 0; i < 4; ++i) {
-        button_actions[i] = Action::Empty;
-    }
+    return Action::None;
 }
 
 bool ButtonManager::any_pressed() {
-    return button_a.raw() ||
-           button_b.raw() ||
-           button_x.raw() ||
-           button_y.raw() ||
+    return button_area.any_pressed() ||
            get_bootsel_button();
 }
 
