@@ -130,7 +130,7 @@ bool ButtonManager::get_bootsel_button() {
     return read_bootsel_button();
 }
 
-bool ButtonManager::get_active_action(Action action) const {
+bool ButtonManager::is_action_active(Action action) const {
 
     if (bootsel_action == action) {
         return true;

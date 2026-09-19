@@ -57,7 +57,7 @@ class ButtonManager {
         void update();
         
         // true if the action was triggered by buttons
-        bool get_active_action(Action action);
+        bool is_action_active(Action action);
                          
         // true if any button was newly pressed
         bool has_activity() const;
