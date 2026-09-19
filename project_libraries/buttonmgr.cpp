@@ -15,21 +15,21 @@ using namespace pimoroni;
 // ├─ button_b → B
 // ├─ button_x → X
 // └─ button_y → Y
-ButtonArea::ButtonArea()
+ButtonGroup::ButtonGroup()
     : button_a(PicoDisplay2::A),
       button_b(PicoDisplay2::B),
       button_x(PicoDisplay2::X),
       button_y(PicoDisplay2::Y)
 {}
 
-void ButtonArea::update() {
+void ButtonGroup::update() {
     button_a.update();
     button_b.update();
     button_x.update();
     button_y.update();
 }
 
-ActionButton* ButtonArea::get_button(char button) {
+ActionButton* ButtonGroup::get_button(char button) {
     switch (button) {
         case 'a':
         case 'A':
@@ -52,39 +52,36 @@ ActionButton* ButtonArea::get_button(char button) {
     }
 }
 
-void ButtonArea::set_action(char button, Action action) {
+void ButtonGroup::set_action_icon(char button, const ActionIcons::ActionIcon& action_icon) {
+    
+    // returns pointer to the action button that is paired 
+    // with the friendly name (x/y/a/b) passed as a char
     ActionButton* b = get_button(button);
-    if (b) b->action = action;
+    // if it's not null, point now to the new action button
+    if (b) b->action_icon = &action_icon;
 }
 
-void ButtonArea::clear_action(char button) {
+void ButtonGroup::clear_action_icon(char button) {
     ActionButton* b = get_button(button);
-    if (b) b->action = Action::Empty;
+    if (b) b->action_icon = &ActionIcons::NONE;
 }
 
-void ButtonArea::clear_actions() {
-    button_a.action = Action::Empty;
-    button_b.action = Action::Empty;
-    button_x.action = Action::Empty;
-    button_y.action = Action::Empty;
+void ButtonGroup::clear_actions() {
+    button_a.action_icon = &ActionIcons::NONE;
+    button_b.action_icon = &ActionIcons::NONE;
+    button_x.action_icon = &ActionIcons::NONE;
+    button_y.action_icon = &ActionIcons::NONE;
 }
 
-bool ButtonArea::any_pressed() {
-    return button_a.raw() ||
-           button_b.raw() ||
-           button_x.raw() ||
-           button_y.raw();
-}
-
-// class constructor
-ButtonManager::ButtonManager();
-
-Action ButtonManager::update() {
-
+void ButtonManager::update() {
     absolute_time_t now = get_absolute_time();
 
-    // update button area
-    button_area.update();
+    // update button group
+    button_group.update();
+    
+    // reset bootsel action
+    bootsel_action = Action::None;
+    bootsel_activity = false;
 
     // *********************** 
     // BOOTSEL button handling
@@ -99,7 +96,8 @@ Action ButtonManager::update() {
         bootsel_press_start = now; // time when first press detected
         bootsel_long_handled = false; // it's not a long press (yet?)
         bootsel_was_pressed = true; // register the button was already pressed
-        return Action::Empty;
+        bootsel_activity = true;
+        return;
     }
 
     // bootsel button was pressed and it's still pressed 
@@ -109,8 +107,8 @@ Action ButtonManager::update() {
     if (bootsel_pressed && bootsel_was_pressed && !bootsel_long_handled) {
         if (absolute_time_diff_us(bootsel_press_start, now) / 1000 >= 1000) {
             bootsel_long_handled = true;
-            bootsel_was_pressed = bootsel_pressed;
-            return Action::UsbBoot;
+            bootsel_action = Action::UsbBoot;
+            return;
         }
     }
 
@@ -120,35 +118,56 @@ Action ButtonManager::update() {
 
         // reboot if it's a short press
         if (!bootsel_long_handled) {
-            return Action::Reboot;
+            bootsel_action = Action::Reboot;
+            return;
         }
     }
     
     bootsel_was_pressed = bootsel_pressed;
-
-    return Action::None;
 }
 
-bool ButtonManager::any_pressed() {
-    return button_area.any_pressed() ||
-           get_bootsel_button();
+bool ButtonManager::get_bootsel_button() {
+    return read_bootsel_button();
 }
 
-void ButtonManager::wait_for_button() {
-    // wait until no button is pressed
-    while (any_pressed()) {
-        update();
-        sleep_ms(10);
+bool ButtonManager::get_active_action(Action action) const {
+
+    if (bootsel_action == action) {
+        return true;
     }
 
-    // then wait for any button to be pressed to continue
-    while (!any_pressed()) {
-        update();
-        sleep_ms(10);
+    if (button_group.button_a.pressed &&
+        button_group.button_a.action == action) {
+        return true;
     }
+
+    if (button_group.button_b.pressed &&
+        button_group.button_b.action == action) {
+        return true;
+    }
+
+    if (button_group.button_x.pressed &&
+        button_group.button_x.action == action) {
+        return true;
+    }
+
+    if (button_group.button_y.pressed &&
+        button_group.button_y.action == action) {
+        return true;
+    }
+
+    return false;
 }
 
-bool __no_inline_not_in_flash_func(ButtonManager::get_bootsel_button)() {
+bool ButtonManager::has_activity() const {
+    return bootsel_action != Action::None ||
+           button_group.button_a.pressed ||
+           button_group.button_b.pressed ||
+           button_group.button_x.pressed ||
+           button_group.button_y.pressed;
+}
+
+static bool __no_inline_not_in_flash_func(read_bootsel_button)() {
     const uint CS_PIN_INDEX = 1;
 
     // Interrupt handlers may live in flash, so disable interrupts while

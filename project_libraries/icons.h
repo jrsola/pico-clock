@@ -4,7 +4,6 @@
 
 enum class Action {
     None,
-    Empty,
     Reboot,
     UsbBoot,
     Favorites,
@@ -20,22 +19,22 @@ enum class Action {
     Asterisk
 };
 
-namespace Icons
+namespace ActionIcons
 {
    constexpr uint8_t ICON_WIDTH = 8;
    constexpr uint8_t ICON_HEIGHT = 8;
 
-   struct Icon
+   struct ActionIcon
    {
       uint8_t height;
       uint8_t width;
-      uint8_t data[8];
+      uint8_t data[ICON_HEIGHT];
       Action action;
    };
 
 
    // Default empty icon
-    constexpr Icon NONE = {
+    constexpr ActionIcon NONE = {
         0,
         0,
         {0},
@@ -47,7 +46,7 @@ namespace Icons
    // Asterisk
    // -----------------------------------------------------------------------------
 
-   constexpr Icon ASTERISK = {
+   constexpr ActionIcon ASTERISK = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -67,7 +66,7 @@ namespace Icons
    // Heart
    // -----------------------------------------------------------------------------
 
-   constexpr Icon HEART = {
+   constexpr ActionIcon HEART = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -87,7 +86,7 @@ namespace Icons
    // Back
    // -----------------------------------------------------------------------------
 
-   constexpr Icon BACK = {
+   constexpr ActionIcon BACK = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -107,7 +106,7 @@ namespace Icons
    // Arrow Up
    // -----------------------------------------------------------------------------
 
-   constexpr Icon UP = {
+   constexpr ActionIcon UP = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -127,7 +126,7 @@ namespace Icons
    // Arrow Down
    // -----------------------------------------------------------------------------
 
-   constexpr Icon DOWN = {
+   constexpr ActionIcon DOWN = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -147,7 +146,7 @@ namespace Icons
    // Arrow Right
    // -----------------------------------------------------------------------------
 
-   constexpr Icon RIGHT = {
+   constexpr ActionIcon RIGHT = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -167,7 +166,7 @@ namespace Icons
    // Arrow Left
    // -----------------------------------------------------------------------------
 
-   constexpr Icon LEFT = {
+   constexpr ActionIcon LEFT = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -187,7 +186,7 @@ namespace Icons
    // Enter
    // -----------------------------------------------------------------------------
 
-   constexpr Icon ENTER = {
+   constexpr ActionIcon ENTER = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -207,7 +206,7 @@ namespace Icons
    // Clock
    // -----------------------------------------------------------------------------
 
-   constexpr Icon CLOCK = {
+   constexpr ActionIcon CLOCK = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -227,7 +226,7 @@ namespace Icons
    // Disk
    // -----------------------------------------------------------------------------
 
-   constexpr Icon DISK = {
+   constexpr ActionIcon DISK = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
@@ -247,7 +246,7 @@ namespace Icons
    // Info
    // -----------------------------------------------------------------------------
 
-   constexpr Icon INFO = {
+   constexpr ActionIcon INFO = {
        ICON_HEIGHT,
        ICON_WIDTH,
        {
