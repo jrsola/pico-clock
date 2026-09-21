@@ -1,0 +1,2 @@
+make colors real objects, do not use "strings" to refer to them
+expand class screen same way we did for buttons

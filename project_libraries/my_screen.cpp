@@ -10,10 +10,6 @@ myScreen::myScreen() : frame_buffer(WIDTH * HEIGHT),
     this->clear();
 }
 
-//     this->textx = 10;
-//     this->texty = 10;
-//     this->twidth = WIDTH - 20 - 10;
-
 uint16_t myScreen::get_width() {
     return WIDTH;
 }
@@ -193,24 +189,24 @@ void myScreen::progress_bar(int segments) {
 
     const int segment_width = bar_width / segments;
 
-    // Avança un segment
+    // adds one segment
     progress_segments++;
 
-    // No sobrepassar el total
+    // do not go over the max segments
     if (progress_segments > segments)
         progress_segments = segments;
 
-    // Esborra la barra
+    // deletes current bar
     this->set_pen("black");
     this->rectangle(x, y, bar_width, bar_height);
 
-    // Dibuixa el progrés
+    // draw progress bar
     this->set_pen("light green");
 
     for (int i = 0; i < progress_segments; i++) {
         int width = segment_width;
 
-        // L'últim segment absorbeix els píxels sobrants
+        // last segment rounds up to remaning pixels
         if (i == segments - 1)
             width = bar_width - i * segment_width;
 
@@ -568,146 +564,127 @@ int button_to_corner(char button) {
     }
 }
 
-
-void myScreen::set_buttonhint(char button, const Icons::Icon& icon, const std::string& color) {
-    
-    int corner = button_to_corner(button);
-    
-    if (corner == -1) return; 
-
-    buttonhint[corner].visible = true;
-    buttonhint[corner].icon = icon;
-    buttonhint[corner].color = color;
-}
-
-// when we want to delete it, no icon, it's null_ptr
-void myScreen::clear_buttonhint(char button){
-
-    int corner = button_to_corner(button);
-    
-    if (corner == -1) return;
-
-    buttonhint[corner].visible = false;
-    buttonhint[corner].icon = Icons::NONE;
-    buttonhint[corner].color.clear();
-}
-
-void myScreen::draw_buttonhints(bool show) {
+//draw one button hint
+void myScreen::draw_buttonhint(
+    char button,
+    const ActionIcons::ActionIcon& action_icon,
+    cont std::string& color
+) {
     const int radius = 24;
 
-    for (int corner = 0; corner < 4; corner++) {
-        int origin_x = 0;
-        int origin_y = 0;
+    int corner = button_to_corner(button);
 
-        switch (corner) {
-            case 0: // top left
-                origin_x = 0;
-                origin_y = 0;
-                break;
+    if (corner == -1) return;
 
-            case 1: // bottom left
-                origin_x = 0;
-                origin_y = HEIGHT - radius;
-                break;
+    int origin_x = 0;
+    int origin_y = 0;
 
-            case 2: // top right
-                origin_x = WIDTH - radius;
-                origin_y = 0;
-                break;
+    switch (corner) {
+        case 0: // top left
+            origin_x = 0;
+            origin_y = 0;
+            break;
 
-            case 3: // bottom right
-                origin_x = WIDTH - radius;
-                origin_y = HEIGHT - radius;
-                break;
+        case 1: // bottom left
+            origin_x = 0;
+            origin_y = HEIGHT - radius;
+            break;
 
-            default:
-                return;
-        }
+        case 2: // top right
+            origin_x = WIDTH - radius;
+            origin_y = 0;
+            break;
 
-        // Si show és false o aquest buttonhint està buit,
-        // esborrem tota l'àrea de la raconera.
-        if (!show || !buttonhint[corner].visible) {
-            this->set_pen(background_color);
-            this->rectangle(origin_x, origin_y, radius, radius);
-            continue;
-        }
+        case 3: // bottom right
+            origin_x = WIDTH - radius;
+            origin_y = HEIGHT - radius;
+            break;
 
-        const Icons::Icon& icon = buttonhint[corner].icon;
-        const std::string& color_name = buttonhint[corner].color;
+        default:
+            return;
+    }
 
-        // Draw the corner
-        this->set_pen(color_name);
+    // clear current corner first
+    this->set_pen(background_color);
+    this->rectangle(origin_x, origin_y, radius, radius);
 
-        for (int y = 0; y < radius; y++) {
-            for (int x = 0; x < radius; x++) {
-                int dx = x;
-                int dy = y;
+    // no icon assigned (action is None), nothign to draw
+    if (action_icon.action = Action::None) {
+        return;
+    }
 
-                if (corner == 1) {
-                    // bottom left: mirror Y
-                    dy = radius - 1 - y;
-                } else if (corner == 2) {
-                    // top right: mirror X
-                    dx = radius - 1 - x;
-                } else if (corner == 3) {
-                    // bottom right: mirror X and Y
-                    dx = radius - 1 - x;
-                    dy = radius - 1 - y;
-                }
+    // draw the full corner in the color specified
+    this->set_pen(action_icon.color);
 
-                if ((dx * dx + dy * dy) <= (radius * radius)) {
-                    this->rectangle(origin_x + x, origin_y + y, 1, 1);
-                }
+    for (int y = 0; y < radius; y++) {
+        for (int x = 0; x < radius; x++) {
+            int dx = x;
+            int dy = y;
+
+            if (corner == 1) {
+                // bottom left: mirror Y
+                dy = radius - 1 - y;
+            } else if (corner == 2) {
+                // top right: mirror X
+                dx = radius - 1 - x;
+            } else if (corner == 3) {
+                // bottom right: mirror X and Y
+                dx = radius - 1 - x;
+                dy = radius - 1 - y;
+            }
+
+            if ((dx * dx + dy * dy) <= (radius * radius)) {
+                this->rectangle(origin_x + x, origin_y + y, 1, 1);
             }
         }
+    }
 
-        // Icon inside the corner, hollow using background color
-        const int icon_scale = 2;
-        const int icon_width = icon.width * icon_scale;
-        const int icon_height = icon.height * icon_scale;
-        const int icon_margin = 2;
+    // draw the icon inside the corner, using background color
+    const int icon_scale = 2;
+    const int icon_width = icon.width * icon_scale;
+    const int icon_height = icon.height * icon_scale;
+    const int icon_margin = 2;
 
-        int icon_x = origin_x + icon_margin;
-        int icon_y = origin_y + icon_margin;
+    int icon_x = origin_x + icon_margin;
+    int icon_y = origin_y + icon_margin;
 
-        switch (corner) {
-            case 0: // top left
-                icon_x = origin_x + icon_margin;
-                icon_y = origin_y + icon_margin;
-                break;
+    switch (corner) {
+        case 0: // top left
+            icon_x = origin_x + icon_margin;
+            icon_y = origin_y + icon_margin;
+            break;
 
-            case 1: // bottom left
-                icon_x = origin_x + icon_margin;
-                icon_y = origin_y + radius - icon_height - icon_margin;
-                break;
+        case 1: // bottom left
+            icon_x = origin_x + icon_margin;
+            icon_y = origin_y + radius - icon_height - icon_margin;
+            break;
 
-            case 2: // top right
-                icon_x = origin_x + radius - icon_width - icon_margin;
-                icon_y = origin_y + icon_margin;
-                break;
+        case 2: // top right
+            icon_x = origin_x + radius - icon_width - icon_margin;
+            icon_y = origin_y + icon_margin;
+            break;
 
-            case 3: // bottom right
-                icon_x = origin_x + radius - icon_width - icon_margin;
-                icon_y = origin_y + radius - icon_height - icon_margin;
-                break;
-        }
+        case 3: // bottom right
+            icon_x = origin_x + radius - icon_width - icon_margin;
+            icon_y = origin_y + radius - icon_height - icon_margin;
+            break;
+    }
 
-        this->set_pen(this->background_color);
+    this->set_pen(this->background_color);
 
-        for (int row = 0; row < icon.height; row++) {
-            uint8_t bits = icon.data[row];
+    for (int row = 0; row < icon.height; row++) {
+        uint8_t bits = icon.data[row];
 
-            for (int col = 0; col < icon.width; col++) {
-                bool pixel_on = bits & (1 << (7 - col));
+        for (int col = 0; col < icon.width; col++) {
+            bool pixel_on = bits & (1 << (7 - col));
 
-                if (pixel_on) {
-                    this->rectangle(
-                        icon_x + col * icon_scale,
-                        icon_y + row * icon_scale,
-                        icon_scale,
-                        icon_scale
-                    );
-                }
+            if (pixel_on) {
+                this->rectangle(
+                    icon_x + col * icon_scale,
+                    icon_y + row * icon_scale,
+                    icon_scale,
+                    icon_scale
+                );
             }
         }
     }
@@ -721,7 +698,8 @@ void myScreen::default_buttonhints(){
     draw_buttonhints();
 }
 
-void myScreen::clear_buttonhint_all(){
+// draw all 4 button hints
+void myScreen::draw_buttonhints(){
     clear_buttonhint('a');
     clear_buttonhint('b');
     clear_buttonhint('x');

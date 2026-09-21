@@ -36,7 +36,7 @@ class myScreen {
         std::string last_clock_time = "";
 
         //draw one button hint on screen
-        void draw_buttonhint(char button, const ActionIcons::ActionIcon& action_icon, const std::string& color = "white");
+        void draw_buttonhint(char button, const ActionIcons::ActionIcon& action_icon);
 
     public:
         // constructor
@@ -80,7 +80,6 @@ class myScreen {
         const ActionIcons::ActionIcon& button_a,
         const ActionIcons::ActionIcon& button_b,
         const ActionIcons::ActionIcon& button_x,
-        const ActionIcons::ActionIcon& button_y,
-        const std::string& color = "white"
+        const ActionIcons::ActionIcon& button_y
     );
 };
