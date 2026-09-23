@@ -56,7 +56,6 @@ pico_sdk_init()
 # Add your source files
 add_executable(${NAME}
     main.cpp
-    project_libraries/color.cpp
     project_libraries/my_screen.cpp
     project_libraries/my_led.cpp
     project_libraries/buttonmgr.cpp

@@ -30,7 +30,7 @@ namespace ActionIcons
       uint8_t width;
       uint8_t data[ICON_HEIGHT];
       Action action;
-      const char* color;
+      Colors::Color color;
    };
 
 
@@ -40,7 +40,7 @@ namespace ActionIcons
         0,
         {0},
         Action::None,
-        "white"
+        Colors::WHITE
     };
 
 
@@ -62,7 +62,7 @@ namespace ActionIcons
            0b00011000
        },
        Action::Asterisk,
-       "blue"
+       Colors::BLUE
    };
 
    // -----------------------------------------------------------------------------
@@ -83,7 +83,7 @@ namespace ActionIcons
            0b00000000
        },
        Action::Favorite,
-       "red"
+       Colors::RED
    };
 
    // -----------------------------------------------------------------------------
@@ -104,7 +104,7 @@ namespace ActionIcons
            0b00000000
        },
        Action::Back,
-       "yellow"
+       Colors::YELLOW
    };
 
    // -----------------------------------------------------------------------------
@@ -125,7 +125,7 @@ namespace ActionIcons
            0b00000000
        },
        Action::Up,
-       "yellow"
+       Colors::YELLOW
    };
 
    // -----------------------------------------------------------------------------
@@ -146,7 +146,7 @@ namespace ActionIcons
            0b00011000
        },
        Action::Down,
-       "yellow"
+       Colors::YELLOW
    };
 
    // -----------------------------------------------------------------------------
@@ -167,7 +167,7 @@ namespace ActionIcons
            0b00010000
        },
        Action::Right,
-       "yellow"
+       Colors::YELLOW
    };
 
    // -----------------------------------------------------------------------------
@@ -188,7 +188,7 @@ namespace ActionIcons
            0b00001000
        },
        Action::Left,
-       "yellow"
+       Colors::YELLOW
    };
 
    // -----------------------------------------------------------------------------
@@ -209,7 +209,7 @@ namespace ActionIcons
            0b00100000
        },
        Action::Enter,
-       "yellow"
+       Colors::YELLOW
    };
 
    // -----------------------------------------------------------------------------
@@ -230,7 +230,7 @@ namespace ActionIcons
            0b00111100
        },
        Action::ShowClock,
-       "yellow"
+       Colors::YELLOW
    };
 
    // -----------------------------------------------------------------------------
@@ -251,7 +251,7 @@ namespace ActionIcons
            0b11111111
        },
        Action::ExposeDisk,
-       "orange"
+       Colors::ORANGE
    };
 
    // -----------------------------------------------------------------------------
@@ -272,6 +272,6 @@ namespace ActionIcons
            0b00111100
        },
        Action::ShowInfo,
-       "blue"
+       Colors::BLUE
    };
 }
