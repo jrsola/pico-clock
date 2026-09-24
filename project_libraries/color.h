@@ -4,6 +4,7 @@
 
 namespace Colors
 {
+    // define a color based on its three components
     struct Color {
         uint8_t r;
         uint8_t g;
@@ -30,6 +31,7 @@ namespace Colors
     constexpr Color GREY        = {128,128,128};
     constexpr Color DARK_GREY   = {32,32,32};
 
+    // Pimoroni screen works with rgb332
     // convert rgb888 (24 bits) into rgb332 (8 bits) 
     // rgb332: 3 bits for red, 3 bits for green, 2 bits for blue
     constexpr uint8_t to_rgb332(const Color& color) {
@@ -46,7 +48,7 @@ namespace Colors
         return (r3 << 5) | (g3 << 2) | b2;
     }
 
-    // fade an rgb332 color
+    // fade an rgb332 color to black
     // brightness: 0 = black, 255 = original color
     constexpr uint8_t fade_rgb332(uint8_t color, uint8_t brightness){
         // divide the 8 bit rgb color value into each component
@@ -62,4 +64,26 @@ namespace Colors
         // pack each component value back into an 8 bit value 
         return (r3 << 5) | (g3 << 2) | b2;
     }
+
+    // this is a special case of fading, but towards another color
+    constexpr uint8_t transition_to_rgb332(uint8_t from, uint8_t to) {
+    uint8_t from_r = from >> 5;
+    uint8_t from_g = (from >> 2) & 0b00000111;
+    uint8_t from_b = from & 0b00000011;
+
+    uint8_t to_r = to >> 5;
+    uint8_t to_g = (to >> 2) & 0b00000111;
+    uint8_t to_b = to & 0b00000011;
+
+    if (from_r < to_r) from_r++;
+    else if (from_r > to_r) from_r--;
+
+    if (from_g < to_g) from_g++;
+    else if (from_g > to_g) from_g--;
+
+    if (from_b < to_b) from_b++;
+    else if (from_b > to_b) from_b--;
+
+    return (from_r << 5) | (from_g << 2) | from_b;
+}
 }

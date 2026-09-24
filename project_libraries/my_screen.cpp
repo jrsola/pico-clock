@@ -1,107 +1,95 @@
 #include "my_screen.h"
 
-myScreen::myScreen() : frame_buffer(WIDTH * HEIGHT),
-                       screen(WIDTH, HEIGHT, frame_buffer.data()),
-                       st7789(WIDTH, HEIGHT, ROTATE_0, false, get_spi_pins(BG_SPI_FRONT)) {
-    this->set_brightness(this->backlight);
-    this->textx = 10;
-    this->texty = 10;
-    this->twidth = WIDTH - 20 - 10;
-    this->clear();
+// class constructor
+// nullptr is the framebuffer we'll use for the screen
+// we will define this later
+PicoScreen::PicoScreen() : 
+    PicoGraphics_PenRGB332(
+        PicoDisplay2::WIDTH,
+        PicoDisplay2::HEIGHT,
+        nullptr
+    ),
+    st7789(
+        PicoDisplay2::WIDTH,
+        PicoDisplay2::HEIGHT,
+        ROTATE_0,
+        false,
+        get_spi_pins(BG_SPI_FRONT)
+    ),
+    // define a framebuffer with the dimensions
+    frame_buffer(PicoDisplay2::WIDTH * PicoDisplay2::HEIGHT)
+{
+    // now we assign the framebuffer
+    set_framebuffer(frame_buffer.data());
+
+    set_brightness(backlight);
+
+    textx = 10;
+    texty = 10;
+    twidth = get_width() - 20 - 10;
+    clear(Colors::BLACK);
 }
 
 uint16_t myScreen::get_width() {
-    return WIDTH;
+    return PicoDisplay2::WIDTH;
 }
 
 uint16_t myScreen::get_height() {
-    return HEIGHT;
+    return PicoDisplay2::HEIGHT;
 }
 
-void myScreen::set_brightness(uint8_t backlight) {
+void PicoScreen::set_brightness(uint8_t backlight) {
     this->backlight = backlight;
     st7789.set_backlight(this->backlight);
 }
 
-uint8_t myScreen::get_brightness() {
-    return this->backlight;
+uint8_t PicoScreen::get_brightness() {
+    return backlight;
 }
 
-void myScreen::set_pen(const std::string& color_name) {
-    auto [r, g, b] = Color::get_rgb(color_name);
-    this->set_pen(r, g, b);
+void PicoScreen::set_pen(const Colors::Color& color) {
+    // save pen color for later use
+    pen_color = color;
+    PicoGraphics_PenRGB332::set_pen(color.r, color.g, color.b);
 }
 
-void myScreen::set_pen(std::tuple<uint8_t, uint8_t, uint8_t> rgb_tuple) {
-    auto [r, g, b] = rgb_tuple;
-    this->set_pen(r, g, b);
+Colors::Color PicoScreen::get_pen() {
+    return pen_color;
 }
 
-void myScreen::set_pen(uint8_t r, uint8_t g, uint8_t b) {
-    this->pen_color = {r, g, b};
-    screen.set_pen(r, g, b);
-}
+void PicoScreen::clear(const Colors::Color& color, int fade_steps, bool upd) {
+    background_color = color;
+    uint8_t target_color = Colors::to_rgb332(color);
 
-std::tuple<uint8_t, uint8_t, uint8_t> myScreen::get_pen() {
-    return this->pen_color;
-}
-
-void myScreen::pixel(const Point &p) {
-    screen.pixel(p);
-}
-
-void myScreen::clear(const std::string& color_name, int fade_steps, bool upd) {
-    this->background_color = color_name;
-    uint8_t target_color = Color::get_rgb332(color_name);
-
-    // Immediate clear
+    // immediate clear
     if (fade_steps <= 0) {
-        screen.set_pen(target_color);
-        this->rectangle(0, 0, WIDTH, HEIGHT);
-        this->update();
+        PicoGraphics_PenRGB332::set_pen(target_color);
+        
+        rectangle(Rect(0, 0, get_width(), get_height()));
+
+        if(upd) update();
+        
         return;
     }
 
-    auto step_towards_rgb332 = [](uint8_t from, uint8_t to) -> uint8_t {
-        int from_r = (from >> 5) & 0x07;
-        int from_g = (from >> 2) & 0x07;
-        int from_b = from & 0x03;
-
-        int to_r = (to >> 5) & 0x07;
-        int to_g = (to >> 2) & 0x07;
-        int to_b = to & 0x03;
-
-        if (from_r < to_r) from_r++;
-        else if (from_r > to_r) from_r--;
-
-        if (from_g < to_g) from_g++;
-        else if (from_g > to_g) from_g--;
-
-        if (from_b < to_b) from_b++;
-        else if (from_b > to_b) from_b--;
-
-        return (from_r << 5) | (from_g << 2) | from_b;
-    };
-
     const int fade_delay = 30;
-    const int buffer_size = WIDTH * HEIGHT;
+    const int buffer_size = get_width() * get_height();
 
     for (int step = 0; step < fade_steps; step++) {
         for (int i = 0; i < buffer_size; i++) {
-            frame_buffer[i] = step_towards_rgb332(
-                frame_buffer[i],
-                target_color
-            );
-        }
+            frame_buffer[i] = Colors::transition_to_rgb332(frame_buffer[i], target_color);
+    }
 
-        this->update();
+        update();
         sleep_ms(fade_delay);
     }
 
     // Ensure final color is exact
-    screen.set_pen(target_color);
-    this->rectangle(0, 0, WIDTH, HEIGHT);
-    if (upd) this->update();
+    PicoGraphics_PenRGB332::set_pen(target_color);
+    
+    rectangle(Rect(0, 0, get_width(), get_height()));
+ 
+    if (upd) update();
 }
 
 void myScreen::update() {

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <tuple>
 #include <vector>
 #include <ctime>
 
@@ -15,24 +14,20 @@
 
 using namespace pimoroni;
 
-class myScreen {
+// our class is going to piggyback on the Pimoroni one for this screen
+// that works with RGB332
+class PicoScreen : public PicoGraphics_PenRGB332 {
     private:
-        const uint16_t WIDTH = 320;
-        const uint16_t HEIGHT = 240;
-        
         uint8_t backlight = 255;
-        
-        std::tuple<uint8_t, uint8_t, uint8_t> pen_color;
-        
+
+        Colors::Color pen_color = Colors::WHITE;
+        Colors::Color background_color = Colors::BLACK;
+
         ST7789 st7789;
         std::vector<uint8_t> frame_buffer;
-        pimoroni::PicoGraphics_PenRGB332 screen;
-        
-        std::string background_color = "black";
         
         int textx, texty, twidth;
         int progress_segments = 0;
-        
         std::string last_clock_time = "";
 
         //draw one button hint on screen
@@ -40,46 +35,44 @@ class myScreen {
 
     public:
         // constructor
-        myScreen();
+        PicoScreen();
 
+        // keep original PicoGraphics overloads accessible
+        using PicoGraphics_PenRGB332::set_pen;
+        using PicoGraphics_PenRGB332::clear;
+        
+        // get screen dimensions
         uint16_t get_width();
         uint16_t get_height();
         
+        // get and set screen brightness
         void set_brightness(uint8_t backlight);
         uint8_t get_brightness();
         
-        void set_pen(const std::string& color_name);
-        void set_pen(std::tuple<uint8_t, uint8_t, uint8_t> rgb_tuple);
-        void set_pen(uint8_t r, uint8_t g, uint8_t b);
-        
-        std::tuple<uint8_t, uint8_t, uint8_t> get_pen();
-        
-        void pixel(const Point &p);
-        
-        void clear(const std::string& color_name = "black", int fade_steps = 0, bool upd = true);
+        // get and set pen color
+        void set_pen(const Colors::Color& color);
+        Colors::Color get_pen();
+
+        void clear(const Colors::Color& color, int fade_steps = 0, bool upd = true);
         
         void update();
         
-        void rectangle(int x, int y, int width, int height);
-        
-        void writeln(const std::string_view &t = "", const std::string& color_name = "");
-        
-        void writexy(int x, int y, const std::string_view &t = "", const std::string& color_name = "", int scale = 2);
+        void writexy(int x, int y, const std::string_view &t = "", const Colors::Color& color = Colors::WHITE, int scale = 2);
         
         void draw_logo(const std::string& title = "", const int steps = 15, const int delay = 100);
         
         void progress_bar(int segments = 13);
         
-        void show_boot_message(std::string_view boot_msg = "", const std::string& color_name = "white");
+        void show_boot_message(std::string_view boot_msg = "", const Colors::Color& color = Colors::YELLOW);
         
-        void draw_clock_time(int x, int y, const std::string& clock_time, const std::string& color_name = "yellow", int size = 6, bool force_redraw = false);
-        void draw_clock_time(const std::string& clock_time, const std::string& color_name = "yellow", int size = 6, bool force_redraw = false);
+        void draw_clock_time(int x, int y, const std::string& clock_time, const Colors::Color& color = Colors::YELLOW, int size = 6, bool force_redraw = false);
+        void draw_clock_time(const std::string& clock_time, const Colors::Color& color = Colors::YELLOW, int size = 6, bool force_redraw = false);
         
-            // draw the 4 button hints (a/b/x/y)
-    void draw_buttonhints(
-        const ActionIcons::ActionIcon& button_a,
-        const ActionIcons::ActionIcon& button_b,
-        const ActionIcons::ActionIcon& button_x,
-        const ActionIcons::ActionIcon& button_y
-    );
+        // draw the 4 button hints (a/b/x/y)
+        void draw_buttonhints(
+            const ActionIcons::ActionIcon& button_a,
+            const ActionIcons::ActionIcon& button_b,
+            const ActionIcons::ActionIcon& button_x,
+            const ActionIcons::ActionIcon& button_y
+        );
 };
