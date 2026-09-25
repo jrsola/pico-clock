@@ -1,13 +1,11 @@
 #include "my_screen.h"
 
 // class constructor
-// nullptr is the framebuffer we'll use for the screen
-// we will define this later
 PicoScreen::PicoScreen() : 
     PicoGraphics_PenRGB332(
         PicoDisplay2::WIDTH,
         PicoDisplay2::HEIGHT,
-        nullptr
+        nullptr // framebuffer for screen, will define later
     ),
     st7789(
         PicoDisplay2::WIDTH,
@@ -16,7 +14,7 @@ PicoScreen::PicoScreen() :
         false,
         get_spi_pins(BG_SPI_FRONT)
     ),
-    // define a framebuffer with the dimensions
+    // define a framebuffer with the screen's dimensions
     frame_buffer(PicoDisplay2::WIDTH * PicoDisplay2::HEIGHT)
 {
     // now we assign the framebuffer
@@ -30,33 +28,54 @@ PicoScreen::PicoScreen() :
     clear(Colors::BLACK);
 }
 
-uint16_t myScreen::get_width() {
+// get the screen width
+uint16_t PicoScreen::get_width() {
     return PicoDisplay2::WIDTH;
 }
 
-uint16_t myScreen::get_height() {
+// get the screen height
+uint16_t PicoScreen::get_height() {
     return PicoDisplay2::HEIGHT;
 }
 
+// call the chipset to update the screen content
+void PicoScreen::update() {
+    st7789.update(&screen);
+}
+
+// call the chipset to set the screen brightness level
+// save the value in our class attribute
 void PicoScreen::set_brightness(uint8_t backlight) {
     this->backlight = backlight;
     st7789.set_backlight(this->backlight);
 }
 
+// retrieve the screen brightness 
 uint8_t PicoScreen::get_brightness() {
     return backlight;
 }
 
+// set the pen color using Pimononi's library
+// save the value in a class attribute
 void PicoScreen::set_pen(const Colors::Color& color) {
     // save pen color for later use
-    pen_color = color;
+    this->pen_color = color;
     PicoGraphics_PenRGB332::set_pen(color.r, color.g, color.b);
 }
 
+// retrieve the pen color
 Colors::Color PicoScreen::get_pen() {
     return pen_color;
 }
 
+// just calling the standard rectangle method wihtout a Rect object
+void PicoScreen::rectangle(int x, int y, int width, int height) {
+    PicoGraphics_PenRGB332::rectangle(Rect(x, y, width, height));
+}
+
+// clear the screen, i.e. fill it all with a background color
+// optionally we can add a fade effect (default is no fading)
+// screen can be kept without updating (default is update)
 void PicoScreen::clear(const Colors::Color& color, int fade_steps, bool upd) {
     background_color = color;
     uint8_t target_color = Colors::to_rgb332(color);
@@ -65,10 +84,9 @@ void PicoScreen::clear(const Colors::Color& color, int fade_steps, bool upd) {
     if (fade_steps <= 0) {
         PicoGraphics_PenRGB332::set_pen(target_color);
         
-        rectangle(Rect(0, 0, get_width(), get_height()));
+        rectangle(0, 0, get_width(), get_height());
 
         if(upd) update();
-        
         return;
     }
 
@@ -84,45 +102,35 @@ void PicoScreen::clear(const Colors::Color& color, int fade_steps, bool upd) {
         sleep_ms(fade_delay);
     }
 
-    // Ensure final color is exact
+    // get sure the final color is exactly the one stated
     PicoGraphics_PenRGB332::set_pen(target_color);
     
-    rectangle(Rect(0, 0, get_width(), get_height()));
+    rectangle(0, 0, get_width(), get_height());
  
     if (upd) update();
 }
 
-void myScreen::update() {
-    st7789.update(&screen);
-}
-
-void myScreen::rectangle(int x, int y, int width, int height) {
-    screen.rectangle(Rect(x, y, width, height));
-}
-
-void myScreen::writeln(const std::string_view &t, const std::string& color_name) {
-    this->writexy(this->textx, this->texty, t, color_name);
-    this->textx = 10;
-    this->texty += 16;
-}
-
-void myScreen::writexy(int x, int y, const std::string_view &t, const std::string& color_name, int scale) {
-    if (!color_name.empty()) {
-        this->set_pen(color_name);
+void PicoScreen::writexy(int x, int y, const std::string_view &t, const Colors::Color& color, int scale) {
+    if (t.empty()) {
+        return;
     }
-    if (!t.empty()) {
-        screen.text(t, pimoroni::Point(x + 5, y + 2), this->twidth, scale);
-        this->update();
-    }
+
+    set_pen(color);
+
+    text(t, Point(x + 5, y + 2), twidth, scale);
+    update();
+
 }
 
-void myScreen::draw_logo(const std::string& title, const int steps, const int delay) {
+// draw a fading bootup logo using the image in logo_rgb332.h
+// optionally can show a text under the logo (default is none), 
+// and control the speed (default is 100 ms for each fading step)
+void PicoScreen::draw_logo(const std::string& title, const int delay) {
     const int scale = 2;
     const int border = 4;
     const int y_spacing = 20;
-    const int text_gap = 8;
 
-    const int logo_x = (WIDTH - (logo_width * scale)) / 2;
+    const int logo_x = (get_width() - (logo_width * scale)) / 2;
     const int logo_y = y_spacing;
 
     // draw the frame
@@ -134,7 +142,9 @@ void myScreen::draw_logo(const std::string& title, const int steps, const int de
         (logo_height * scale) + (border * 2)
     );
 
-    for (int round = 0; round <= steps; round++){
+    const int steps = 15;
+    for (int round = 0; round <= steps; round++)
+    {
         uint8_t brightness = (255 * round) / steps;
         for (int iy = 0; iy < logo_height; iy++) {
             for (int ix = 0; ix < logo_width; ix++) {
@@ -153,9 +163,10 @@ void myScreen::draw_logo(const std::string& title, const int steps, const int de
     }
     sleep_ms(delay*3);
     // Draw centered title under logo
+    const int text_gap = 8;
     const int title_scale = 3;
     int text_width = screen.measure_text(title, title_scale);
-    int text_x = (WIDTH - text_width) / 2;
+    int text_x = (get_width() - text_width) / 2;
     int text_y = y_spacing + (logo_height * scale) + (border * 2) + text_gap;
 
     // writexy adds +5 and +2 internally, so compensate here

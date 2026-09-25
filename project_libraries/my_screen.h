@@ -36,10 +36,6 @@ class PicoScreen : public PicoGraphics_PenRGB332 {
     public:
         // constructor
         PicoScreen();
-
-        // keep original PicoGraphics overloads accessible
-        using PicoGraphics_PenRGB332::set_pen;
-        using PicoGraphics_PenRGB332::clear;
         
         // get screen dimensions
         uint16_t get_width();
@@ -59,7 +55,7 @@ class PicoScreen : public PicoGraphics_PenRGB332 {
         
         void writexy(int x, int y, const std::string_view &t = "", const Colors::Color& color = Colors::WHITE, int scale = 2);
         
-        void draw_logo(const std::string& title = "", const int steps = 15, const int delay = 100);
+        void draw_logo(const std::string& title = "", const int delay = 100);
         
         void progress_bar(int segments = 13);
         
