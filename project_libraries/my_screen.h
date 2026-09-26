@@ -18,6 +18,7 @@ using namespace pimoroni;
 // that works with RGB332
 class PicoScreen : public PicoGraphics_PenRGB332 {
     private:
+        static constexpr int NO_WRAP = 10000;    
         uint8_t backlight = 255;
 
         Colors::Color pen_color = Colors::WHITE;

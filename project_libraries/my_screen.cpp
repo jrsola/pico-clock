@@ -75,7 +75,7 @@ void PicoScreen::rectangle(int x, int y, int width, int height) {
 
 // clear the screen, i.e. fill it all with a background color
 // optionally we can add a fade effect (default is no fading)
-// screen can be kept without updating (default is update)
+// we can update the screen optionally (default is update)
 void PicoScreen::clear(const Colors::Color& color, int fade_steps, bool upd) {
     background_color = color;
     uint8_t target_color = Colors::to_rgb332(color);
@@ -110,6 +110,7 @@ void PicoScreen::clear(const Colors::Color& color, int fade_steps, bool upd) {
     if (upd) update();
 }
 
+// write a text at the x/y coordinates with a certain color and scale
 void PicoScreen::writexy(int x, int y, const std::string_view &t, const Colors::Color& color, int scale) {
     if (t.empty()) {
         return;
@@ -117,63 +118,68 @@ void PicoScreen::writexy(int x, int y, const std::string_view &t, const Colors::
 
     set_pen(color);
 
-    text(t, Point(x + 5, y + 2), twidth, scale);
+    // write the text at (x,y), don't wrap it and with the scale specified
+    text(t, Point(x, y), NO_WRAP, scale);
     update();
-
 }
 
 // draw a fading bootup logo using the image in logo_rgb332.h
 // optionally can show a text under the logo (default is none), 
 // and control the speed (default is 100 ms for each fading step)
 void PicoScreen::draw_logo(const std::string& title, const int delay) {
-    const int scale = 2;
-    const int border = 4;
-    const int y_spacing = 20;
+    const int scale = 2; // scale the image
+    const int border = 4; // add a border around it
+    const int y_spacing = 20; // start at this y position of the screen
+    const int fading_steps = 15; // fade in steps for the logo
 
+    // calculate the coordinates to place the logo centered on x
     const int logo_x = (get_width() - (logo_width * scale)) / 2;
     const int logo_y = y_spacing;
 
-    // draw the frame
-    this->set_pen("grey");
-    this->rectangle(
-        logo_x - border,
-        y_spacing - border, 
-        (logo_width * scale) + (border * 2),
+    // draw the border around the logo
+    set_pen(Colors::GREY);
+    rectangle(
+        logo_x - border, 
+        logo_y - border, 
+        (logo_width * scale) + (border * 2), 
         (logo_height * scale) + (border * 2)
     );
 
-    const int steps = 15;
-    for (int round = 0; round <= steps; round++)
-    {
-        uint8_t brightness = (255 * round) / steps;
+    // fade logo in
+    for (int step = 0; step <= fading_steps; step++) {
+        uint8_t brightness = (255 * step) / fading_steps;
+        
+        // draw the logo, one pixel and one row at a time
         for (int iy = 0; iy < logo_height; iy++) {
             for (int ix = 0; ix < logo_width; ix++) {
                 int px = logo_x + ix * scale;
                 int py = logo_y + iy * scale;
                 // sets color from logo (current pixel)
                 uint8_t color = logo[iy * logo_width + ix];
-                uint8_t faded_color = Color::fade_rgb332(color, brightness);
+                uint8_t faded_color = Colors::fade_rgb332(color, brightness);
 
-                screen.set_pen(faded_color);
-                this->rectangle(px, py, scale, scale);
+                PicoGraphics_PenRGB332::set_pen(faded_color);
+                rectangle(px, py, scale, scale);
             }
         }
-        this->update();
+        update();
         sleep_ms(delay);
     }
-    sleep_ms(delay*3);
-    // Draw centered title under logo
-    const int text_gap = 8;
-    const int title_scale = 3;
-    int text_width = screen.measure_text(title, title_scale);
-    int text_x = (get_width() - text_width) / 2;
-    int text_y = y_spacing + (logo_height * scale) + (border * 2) + text_gap;
+    sleep_ms(delay * 3);
+    
+    // draw text centered under logo (if provided)
+    if (!title.empty()){
+        const int text_gap = 8;
+        const int title_scale = 3;
+        // measure_text returns the width in pixels of a given text at a certain scale
+        const int text_width = PicoGraphics_PenRGB332::measure_text(title, title_scale);
+        int text_x = (get_width() - text_width) / 2;
+        int text_y = logo_y + (logo_height * scale) + (border * 2) + text_gap;
 
-    // writexy adds +5 and +2 internally, so compensate here
-    myScreen::writexy(text_x - 5, text_y - 2, title, "yellow", title_scale);
-    this->update();
-    sleep_ms(delay*5);
+        writexy(text_x, text_y, title, Colors::YELLOW, title_scale);
+    }
 
+    sleep_ms(delay * 5);
 }
 
 void myScreen::progress_bar(int segments) {
