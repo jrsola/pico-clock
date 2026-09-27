@@ -178,72 +178,63 @@ void PicoScreen::draw_logo(const std::string& title, int delay) {
         int text_y = logo_y + (logo_height * scale) + (border * 2) + text_gap;
 
         writexy(text_x, text_y, title, Colors::YELLOW, title_scale, false);
+        
         update();
     }
 
     sleep_ms(delay * 5);
 }
 
-void PicoScreen::draw_progress_bar(int segments) {
+void PicoScreen::boot_progress(
+    std::string_view message,
+    const Colors::Color& color,
+    std::optional<int> progress
+    ) {
+    const int center_x = get_width() / 2;
+    const int status_y = get_height() - 45;
+
     const int bar_width = 120;
     const int bar_height = 10;
+    const int bar_y = get_height() - bar_height - 5;
 
-    const int x = (WIDTH - bar_width) / 2;
-    const int y = HEIGHT - bar_height - 5;
+    // clear status message area
+    set_pen(background_color);
+    rectangle(0, status_y, get_width(), 16
+    );
 
-    if (segments <= 0)
-        return;
-
-    const int segment_width = bar_width / segments;
-
-    // adds one segment
-    progress_segments++;
-
-    // do not go over the max segments
-    if (progress_segments > segments)
-        progress_segments = segments;
-
-    // deletes current bar
-    this->set_pen("black");
-    this->rectangle(x, y, bar_width, bar_height);
-
-    // draw progress bar
-    this->set_pen("light green");
-
-    for (int i = 0; i < progress_segments; i++) {
-        int width = segment_width;
-
-        // last segment rounds up to remaning pixels
-        if (i == segments - 1)
-            width = bar_width - i * segment_width;
-
-        this->rectangle(
-            x + i * segment_width,
-            y,
-            width,
-            bar_height
-        );
-    }
-}
-
-void PicoScreen::show_boot_message(std::string_view message, const Colors::Color& color) {
-    const int status_height = 16;
-    const int status_x = 0;
-    const int status_y = HEIGHT - 45;
-
-    // Clear status area
-    this->set_pen(background_color);
-    this->rectangle(status_x, status_y, WIDTH, status_height);
-
-    // Write status text
+    // draw centered status message
+    const int text_scale = 2;
     if (!message.empty()) {
-        this->set_pen(color_name);
-        int text_width = screen.measure_text(message);
-        int text_x = (WIDTH - text_width) / 2;
-        screen.text(message, pimoroni::Point(text_x, status_y), WIDTH);
+        const int text_x = center_x - (measure_text(message, text_scale) / 2);
+        writexy(text_x, status_y, message, color, text_scale, false);
+    };
+
+    // only touch the progress bar if a value was provided
+    if (progress.has_value()) {
+        int value = progress.value();
+
+        // clear current progress bar
+        set_pen(background_color);
+        rectangle(bar_x, bar_y, bar_width, bar_height);
+
+        // -1 means remove the progress bar
+        if (value != -1) {
+            // keep percentage inside 0..100
+            if (value < 0) value = 0;
+            if (value > 100) value = 100;
+
+            const int progress_width = (bar_width * value) / 100;
+
+            // draw filled part of progress bar
+            if (progress_width > 0) {
+                set_pen(Colors::LIGHT_GREEN);
+
+                rectangle(bar_x, bar_y, progress_width, bar_height);
+            }
+        }
     }
-    this->progress_bar();
-    this->update();
+
+    update();
     sleep_ms(500);
 }
 

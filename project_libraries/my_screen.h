@@ -3,6 +3,7 @@
 #include <string>
 #include <ctime>
 #include <string_view>
+#include <optional>
 
 #include "pico_display_2.hpp"
 #include "pico_graphics.hpp"
@@ -30,7 +31,6 @@ class PicoScreen : public PicoGraphics_PenRGB332 {
         // screen controller chipset
         ST7789 st7789;
         
-        int progress_segments = 0;
         std::string last_clock_time = "";
 
         //draw one button hint on screen
@@ -78,7 +78,7 @@ class PicoScreen : public PicoGraphics_PenRGB332 {
         
         // draw a progress bar in the lower part of the screen, suitable for bootup progress
         // final version should accept just a percentage and a color (default is 0% and green)
-        void draw_progress_bar(int segments = 13);
+        void boot_progress(std::string_view message="", const Colors::Color& = Colors::WHITE, std::optional<int> progress = std::nullopt);
         
         // show bootup status message
         // default is no message and color yellow
