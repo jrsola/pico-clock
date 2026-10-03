@@ -76,16 +76,13 @@ class PicoScreen : public PicoGraphics_PenRGB332 {
         // fading speed can be contolled (default is 100 ms for each fading step)
         void draw_logo(const std::string& title = "", int delay = 100);
         
-        // draw a progress bar in the lower part of the screen, suitable for bootup progress
-        // final version should accept just a percentage and a color (default is 0% and green)
+        // show the booting progress in the lower part of the screen.
+        // shows a centered message and/or a progress bar (both optional)
+        // accepts the text and a color for the text, and a percentage for the progress bar
+        // -1 means delete the progress bar, no progress bar percentage means leave it as is
         void boot_progress(std::string_view message="", const Colors::Color& = Colors::WHITE, std::optional<int> progress = std::nullopt);
         
-        // show bootup status message
-        // default is no message and color yellow
-        // should be combined with progress bar
-        void show_boot_message(std::string_view boot_msg = "", const Colors::Color& color = Colors::YELLOW);
-        
-        // draw a big digital clock to be used as a screensaver
+         // draw a big digital clock to be used as a screensaver
         void draw_clock_time(int x, int y, const std::string& clock_time, const Colors::Color& color = Colors::YELLOW, int size = 6, bool force_redraw = false);
         void draw_clock_time(const std::string& clock_time, const Colors::Color& color = Colors::YELLOW, int size = 6, bool force_redraw = false);
         

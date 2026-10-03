@@ -189,13 +189,13 @@ void PicoScreen::boot_progress(
     std::string_view message,
     const Colors::Color& color,
     std::optional<int> progress
-    ) {
+) {
     const int center_x = get_width() / 2;
     const int status_y = get_height() - 45;
 
     const int bar_width = 120;
     const int bar_height = 10;
-    const int bar_y = get_height() - bar_height - 5;
+    const int bar_y = get_height() - bar_height;
 
     // clear status message area
     set_pen(background_color);
